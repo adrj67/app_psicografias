@@ -10,7 +10,8 @@ class AppConstants {
   static const int pageSize = 20;
   
   // UI
-  static const Color primaryColor = Colors.deepPurple;
+  static const Color primaryColor = Colors.indigo;
+  static const Color suaveColor = Color.fromARGB(255, 96, 111, 192);
   static const double cardBorderRadius = 12.0;
   static const double imageHeight = 200.0;
   static const int mensajeResumenLength = 100;

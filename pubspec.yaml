@@ -34,7 +34,7 @@ dependencies:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
-  flutter_lints: ^5.0.0
+  # flutter_lints: ^5.0.0
   sqflite: ^2.3.0 # SQLite
   sqflite_common_ffi: ^2.3.0
   path: ^1.8.3
@@ -45,7 +45,7 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  # flutter_lints: ^3.0.0
+  flutter_lints: ^5.0.0
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is

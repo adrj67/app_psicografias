@@ -1,8 +1,10 @@
 import 'package:app_psicografias/widges/error_widget.dart';
 import 'package:app_psicografias/widges/loading_widget.dart';
 import 'package:flutter/material.dart';
+import 'package:sqflite/sqflite.dart';
 import '../database/database_helper.dart';
 import '../models/psicografia.dart';
+import '../models/coleccion.dart';
 import '../utils/constants.dart';
 import 'detalle_screen.dart';
 
@@ -22,12 +24,21 @@ class _ListaScreenState extends State<ListaScreen> {
   String _searchQuery = '';
   String? _errorMessage;
   
+  List<Coleccion> _colecciones = [];
+  int? _coleccionFiltroId;
+  
   final ScrollController _scrollController = ScrollController();
+  
+  // Control para evitar múltiples llamadas
+  bool _isFetching = false;
 
   @override
   void initState() {
     super.initState();
-    _loadPsicografias();
+    // Pequeño delay para asegurar que el widget está montado
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _cargarDatosIniciales();
+    });
     _scrollController.addListener(_onScroll);
   }
 
@@ -40,31 +51,124 @@ class _ListaScreenState extends State<ListaScreen> {
   void _onScroll() {
     if (_scrollController.position.pixels >= 
         _scrollController.position.maxScrollExtent - 200) {
-      if (!_isLoading && _hasMore) {
+      if (!_isLoading && _hasMore && !_isFetching) {
         _loadPsicografias();
       }
     }
   }
 
+  Future<void> _cargarDatosIniciales() async {
+    print('🟢 1. Cargando datos iniciales...');
+    
+    try {
+      // Probar conexión directa a la BD
+      print('🟢 2. Intentando obtener database...');
+      final db = await _dbHelper.database;
+      print('🟢 3. Database obtenida correctamente');
+      
+      // Verificar tablas
+      print('🟢 4. Verificando tablas...');
+      final tables = await db.rawQuery(
+        "SELECT name FROM sqlite_master WHERE type='table'"
+      );
+      print('📋 Tablas encontradas:');
+      for (var row in tables) {
+        print('   - ${row['name']}');
+      }
+      
+      // Contar registros
+      print('🟢 5. Contando registros...');
+      final countResult = await db.rawQuery('SELECT COUNT(*) as total FROM psicografias');
+      final count = Sqflite.firstIntValue(countResult) ?? 0;
+      print('🟢 6. Total de registros: $count');
+      
+      if (count == 0) {
+        print('⚠️ No hay registros en la tabla psicografias');
+        setState(() {
+          _errorMessage = 'No hay datos en la base de datos';
+          _isLoading = false;
+        });
+        return;
+      }
+      
+      print('🟢 7. Cargando colecciones...');
+      await _loadColecciones();
+      
+      print('🟢 8. Cargando psicografías...');
+      await _loadPsicografias();
+      
+    } catch (e, stackTrace) {
+      print('❌ Error: $e');
+      print('❌ StackTrace: $stackTrace');
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Error al cargar datos: $e';
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _loadColecciones() async {
+    try {
+      final cols = await _dbHelper.getColecciones();
+      if (mounted) {
+        setState(() {
+          _colecciones = cols;
+        });
+      }
+    } catch (e) {
+      print('Error cargando colecciones: $e');
+    }
+  }
+
   Future<void> _loadPsicografias() async {
-    if (_isLoading) return;
+     print('🟢 ENTRANDO A _loadPsicografias');
+    // Evitar múltiples llamadas simultáneas
+    if (_isFetching) {
+      print('⚠️ Ya hay una carga en progreso, ignorando...');
+      return;
+    }
+    
+    if (_isLoading) {
+      print('⚠️ Ya está cargando, ignorando...');
+      return;
+    }
+    
+    print('🟢 _loadPsicografias - página: $_currentPage');
     
     setState(() {
       _isLoading = true;
+      _isFetching = true;
       _errorMessage = null;
     });
 
     try {
-      final data = _searchQuery.isNotEmpty
-          ? await _dbHelper.searchPsicografias(
-              _searchQuery,
-              limit: AppConstants.pageSize,
-              offset: _currentPage * AppConstants.pageSize,
-            )
-          : await _dbHelper.getPsicografias(
-              limit: AppConstants.pageSize,
-              offset: _currentPage * AppConstants.pageSize,
-            );
+      List<Map<String, dynamic>> data;
+      
+      if (_coleccionFiltroId != null) {
+        print('📂 Cargando por colección: $_coleccionFiltroId');
+        data = await _dbHelper.getPsicografiasByColeccion(
+          _coleccionFiltroId!,
+          limit: AppConstants.pageSize,
+          offset: _currentPage * AppConstants.pageSize,
+        );
+      } else if (_searchQuery.isNotEmpty) {
+        print('🔍 Buscando: $_searchQuery');
+        data = await _dbHelper.searchPsicografias(
+          _searchQuery,
+          limit: AppConstants.pageSize,
+          offset: _currentPage * AppConstants.pageSize,
+        );
+      } else {
+        print('📋 Cargando todos');
+        data = await _dbHelper.getPsicografias(
+          limit: AppConstants.pageSize,
+          offset: _currentPage * AppConstants.pageSize,
+        );
+      }
+      
+      print('✅ Recibidos ${data.length} registros');
       
       final newPsicografias = data.map((e) => Psicografia.fromMap(e)).toList();
       
@@ -78,24 +182,47 @@ class _ListaScreenState extends State<ListaScreen> {
         _hasMore = newPsicografias.length == AppConstants.pageSize;
         _currentPage++;
         _isLoading = false;
+        _isFetching = false;
       });
       
+      print('📊 Total en memoria: ${_psicografias.length}');
+      
     } catch (e) {
+      print('❌ ERROR: $e');
       setState(() {
         _errorMessage = AppConstants.errorLoadingMessage;
         _isLoading = false;
+        _isFetching = false;
       });
     }
   }
 
   Future<void> _refresh() async {
+    print('🔄 Refrescando...');
     setState(() {
       _currentPage = 0;
       _hasMore = true;
       _psicografias = [];
       _searchQuery = '';
+      _coleccionFiltroId = null;
+      _isLoading = false;
+      _isFetching = false;
     });
     await _loadPsicografias();
+  }
+
+  void _limpiarFiltroColeccion() {
+    print('🧹 Limpiando filtro...');
+    setState(() {
+      _coleccionFiltroId = null;
+      _currentPage = 0;
+      _hasMore = true;
+      _psicografias = [];
+      _searchQuery = '';
+      _isLoading = false;
+      _isFetching = false;
+    });
+    _loadPsicografias();
   }
 
   String _getResumen(String mensaje) {
@@ -106,14 +233,63 @@ class _ListaScreenState extends State<ListaScreen> {
 
   @override
   Widget build(BuildContext context) {
+    print('🏗️ BUILD - isLoading: $_isLoading, psicografias: ${_psicografias.length}');
+    
     return Scaffold(
+      backgroundColor: AppConstants.primaryColor.withValues(alpha: 0.05),
       appBar: AppBar(
         title: Text(AppConstants.appTitle),
         backgroundColor: AppConstants.primaryColor,
         foregroundColor: Colors.white,
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(60),
-          child: Padding(
+        actions: [
+          PopupMenuButton<int?>(
+            icon: Stack(
+              children: [
+                const Icon(Icons.filter_alt),
+                if (_coleccionFiltroId != null)
+                  Positioned(
+                    right: 0,
+                    top: 0,
+                    child: Container(
+                      width: 10,
+                      height: 10,
+                      decoration: const BoxDecoration(
+                        color: Colors.red,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            onSelected: (value) {
+              setState(() {
+                _coleccionFiltroId = value;
+                _currentPage = 0;
+                _hasMore = true;
+                _psicografias = [];
+                _searchQuery = '';
+                _isLoading = false;
+                _isFetching = false;
+              });
+              _loadPsicografias();
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: null,
+                child: Text('Todas las psicografías'),
+              ),
+              if (_colecciones.isNotEmpty) const PopupMenuDivider(),
+              ..._colecciones.map((coleccion) => PopupMenuItem(
+                value: coleccion.id,
+                child: Text(coleccion.nombre),
+              )),
+            ],
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          Padding(
             padding: const EdgeInsets.all(8.0),
             child: TextField(
               decoration: InputDecoration(
@@ -131,14 +307,49 @@ class _ListaScreenState extends State<ListaScreen> {
                   _currentPage = 0;
                   _hasMore = true;
                   _psicografias = [];
+                  _coleccionFiltroId = null;
+                  _isLoading = false;
+                  _isFetching = false;
                 });
                 _loadPsicografias();
               },
             ),
           ),
-        ),
+          if (_coleccionFiltroId != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8.0),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.filter_alt, size: 14, color: AppConstants.primaryColor),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Filtrado por: ${_colecciones.firstWhere((c) => c.id == _coleccionFiltroId).nombre}',
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                      const SizedBox(width: 4),
+                      GestureDetector(
+                        onTap: _limpiarFiltroColeccion,
+                        child: const Icon(Icons.close, size: 14, color: Colors.red),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          Expanded(
+            child: _buildBody(),
+          ),
+        ],
       ),
-      body: _buildBody(),
     );
   }
 
@@ -155,7 +366,21 @@ class _ListaScreenState extends State<ListaScreen> {
     }
     
     if (_psicografias.isEmpty) {
-      return const Center(child: Text(AppConstants.noDataMessage));
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.inbox, size: 64, color: Colors.grey),
+            const SizedBox(height: 16),
+            Text(
+              _searchQuery.isNotEmpty 
+                  ? 'No hay resultados para "$_searchQuery"' 
+                  : AppConstants.noDataMessage,
+              style: const TextStyle(color: Colors.grey),
+            ),
+          ],
+        ),
+      );
     }
     
     return RefreshIndicator(
@@ -174,14 +399,27 @@ class _ListaScreenState extends State<ListaScreen> {
           final psicografia = _psicografias[index];
           return Card(
             margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
             child: ListTile(
-              leading: CircleAvatar(
-                backgroundColor: AppConstants.primaryColor,
-                child: Text(
-                  '${psicografia.id}',
-                  style: const TextStyle(color: Colors.white),
-                ),
-              ),
+              leading: psicografia.imagenPrincipal != null
+                  ? ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.memory(
+                        psicografia.imagenPrincipal!,
+                        width: 50,
+                        height: 50,
+                        fit: BoxFit.cover,
+                      ),
+                    )
+                  : CircleAvatar(
+                      backgroundColor: AppConstants.primaryColor,
+                      child: Text(
+                        '${psicografia.id}',
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                    ),
               title: Text(
                 _getResumen(psicografia.mensaje),
                 maxLines: 2,
