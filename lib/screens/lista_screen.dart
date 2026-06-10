@@ -7,6 +7,8 @@ import '../models/psicografia.dart';
 import '../models/coleccion.dart';
 import '../utils/constants.dart';
 import 'detalle_screen.dart';
+import 'package:provider/provider.dart';
+import '../providers/theme_provider.dart';
 
 class ListaScreen extends StatefulWidget {
   const ListaScreen({super.key});
@@ -236,12 +238,37 @@ class _ListaScreenState extends State<ListaScreen> {
     print('🏗️ BUILD - isLoading: $_isLoading, psicografias: ${_psicografias.length}');
     
     return Scaffold(
-      backgroundColor: AppConstants.primaryColor.withValues(alpha: 0.05),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor, //primaryColor.withValues(alpha: 0.05),
       appBar: AppBar(
         title: Text(AppConstants.appTitle),
-        backgroundColor: AppConstants.primaryColor,
+        backgroundColor: Theme.of(context).primaryColor,
         foregroundColor: Colors.white,
         actions: [
+          // Botón de tema
+          //Consumer<ThemeProvider>(
+          //  builder: (context, themeProvider, child) {
+          //    return IconButton(
+              IconButton(
+                icon: Icon(
+                  // themeProvider.themeMode == ThemeMode.light
+                  //     ? Icons.dark_mode
+                  //     : themeProvider.themeMode == ThemeMode.dark
+                  //         ? Icons.light_mode
+                  //         : Icons.brightness_auto,
+                  Provider.of<ThemeProvider>(context).themeMode == ThemeMode.light
+                  ? Icons.dark_mode
+                  : Provider.of<ThemeProvider>(context).themeMode == ThemeMode.dark
+                      ? Icons.light_mode
+                      : Icons.brightness_auto,
+                ),
+                onPressed: () {
+                  //themeProvider.toggleTheme();
+                  Provider.of<ThemeProvider>(context, listen: false).toggleTheme();
+                },
+                tooltip: 'Cambiar tema',
+              ),
+            //},
+          //),
           PopupMenuButton<int?>(
             icon: Stack(
               children: [
@@ -294,13 +321,16 @@ class _ListaScreenState extends State<ListaScreen> {
             child: TextField(
               decoration: InputDecoration(
                 hintText: AppConstants.searchHint,
-                prefixIcon: const Icon(Icons.search),
+                hintStyle: TextStyle(color: Theme.of(context).hintColor),
+                prefixIcon: Icon(Icons.search, color: Theme.of(context).hintColor),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide.none,
                 ),
                 filled: true,
-                fillColor: Colors.white,
+                fillColor: Theme.of(context).cardTheme.color,
               ),
+              style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color),
               onChanged: (value) {
                 setState(() {
                   _searchQuery = value;
@@ -329,7 +359,7 @@ class _ListaScreenState extends State<ListaScreen> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.filter_alt, size: 14, color: AppConstants.primaryColor),
+                      Icon(Icons.filter_alt, size: 14, color: Theme.of(context).primaryColor),
                       const SizedBox(width: 4),
                       Text(
                         'Filtrado por: ${_colecciones.firstWhere((c) => c.id == _coleccionFiltroId).nombre}',
@@ -414,7 +444,7 @@ class _ListaScreenState extends State<ListaScreen> {
                       ),
                     )
                   : CircleAvatar(
-                      backgroundColor: AppConstants.primaryColor,
+                      backgroundColor: Theme.of(context).primaryColor,
                       child: Text(
                         '${psicografia.id}',
                         style: const TextStyle(color: Colors.white),

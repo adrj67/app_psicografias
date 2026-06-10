@@ -128,7 +128,7 @@ class _ColeccionSelectorState extends State<ColeccionSelector> {
               icon: Icon(_isExpanded ? Icons.expand_less : Icons.expand_more, size: 18),
               label: Text(_isExpanded ? 'Ocultar' : 'Administrar'),
               style: TextButton.styleFrom(
-                foregroundColor: AppConstants.primaryColor,
+                foregroundColor: Theme.of(context).primaryColor,
               ),
             ),
           ],

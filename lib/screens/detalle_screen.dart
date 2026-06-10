@@ -9,6 +9,7 @@ import '../models/psicografia.dart';
 import '../models/coleccion.dart';
 import '../utils/constants.dart';
 
+
 class DetalleScreen extends StatefulWidget {
   final int psicografiaId;
   
@@ -135,7 +136,7 @@ class _DetalleScreenState extends State<DetalleScreen> {
 
   void _copiarAlPortapapeles(String texto, String titulo) {
     Clipboard.setData(ClipboardData(text: texto));
-    _mostrarSnackBar('✓ $titulo copiado al portapapeles', AppConstants.primaryColor);
+    _mostrarSnackBar('✓ $titulo copiado al portapapeles', Theme.of(context).primaryColor);
   }
 
   void _mostrarSnackBar(String mensaje, Color color) {
@@ -155,7 +156,7 @@ class _DetalleScreenState extends State<DetalleScreen> {
       return Scaffold(
         appBar: AppBar(
           title: const Text('Detalle'),
-          backgroundColor: AppConstants.primaryColor,
+          backgroundColor: Theme.of(context).primaryColor,
           foregroundColor: Colors.white,
         ),
         body: const LoadingWidget(),
@@ -166,7 +167,7 @@ class _DetalleScreenState extends State<DetalleScreen> {
       return Scaffold(
         appBar: AppBar(
           title: const Text('Detalle'),
-          backgroundColor: AppConstants.primaryColor,
+          backgroundColor: Theme.of(context).primaryColor,
           foregroundColor: Colors.white,
         ),
         body: ErrorMessageWidget(message: _errorMessage!),
@@ -177,7 +178,7 @@ class _DetalleScreenState extends State<DetalleScreen> {
       return Scaffold(
         appBar: AppBar(
           title: const Text('Detalle'),
-          backgroundColor: AppConstants.primaryColor,
+          backgroundColor: Theme.of(context).primaryColor,
           foregroundColor: Colors.white,
         ),
         body: const Center(child: Text('No se encontró la psicografía')),
@@ -187,9 +188,10 @@ class _DetalleScreenState extends State<DetalleScreen> {
     final psicografia = _psicografia!;
     
     return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('Detalle'),
-        backgroundColor: AppConstants.primaryColor,
+        backgroundColor: Theme.of(context).primaryColor,
         foregroundColor: Colors.white,
       ),
       body: SingleChildScrollView(
@@ -227,7 +229,7 @@ class _DetalleScreenState extends State<DetalleScreen> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppConstants.primaryColor.withValues(alpha: 0.1),
+        color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -236,14 +238,14 @@ class _DetalleScreenState extends State<DetalleScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: AppConstants.primaryColor.withValues(alpha: 0.2),
+              color: Theme.of(context).primaryColor.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
               'ID: ${psicografia.id}',
               style: TextStyle(
                 fontWeight: FontWeight.bold,
-                color: AppConstants.primaryColor,
+                color: Theme.of(context).primaryColor,
               ),
             ),
           ),
@@ -499,23 +501,23 @@ class _DetalleScreenState extends State<DetalleScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         decoration: BoxDecoration(
-          color: AppConstants.primaryColor.withValues(alpha: 0.15),
+          color: Theme.of(context).primaryColor.withValues(alpha: 0.15),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: AppConstants.primaryColor.withValues(alpha: 0.3),
+            color: Theme.of(context).primaryColor.withValues(alpha: 0.3),
             width: 1,
           ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.copy, size: 14, color: AppConstants.primaryColor),
+            Icon(Icons.copy, size: 14, color: Theme.of(context).primaryColor),
             const SizedBox(width: 4),
             Text(
               'Copiar',
               style: TextStyle(
                 fontSize: 11,
-                color: AppConstants.primaryColor,
+                color: Theme.of(context).primaryColor,
                 fontWeight: FontWeight.w500,
               ),
             ),
