@@ -61,6 +61,8 @@ class _ColeccionSelectorState extends State<ColeccionSelector> {
     
     if (mounted) {
       widget.onChanged(_seleccionadas);
+      // Indicar que hubo cambios en las colecciones
+      Navigator.pop(context, true);
     }
   }
 
@@ -96,6 +98,7 @@ class _ColeccionSelectorState extends State<ColeccionSelector> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('✓ Colección creada y asignada'), backgroundColor: Colors.green),
         );
+        Navigator.pop(context, true);  // Indicar que hubo cambios
       }
     } catch (e) {
       if (mounted) {

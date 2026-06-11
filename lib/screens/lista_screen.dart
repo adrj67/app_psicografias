@@ -456,8 +456,8 @@ class _ListaScreenState extends State<ListaScreen> {
                 overflow: TextOverflow.ellipsis,
               ),
               trailing: const Icon(Icons.chevron_right),
-              onTap: () {
-                Navigator.push(
+              onTap: () async {
+                final result = await Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (context) => DetalleScreen(
@@ -465,6 +465,14 @@ class _ListaScreenState extends State<ListaScreen> {
                     ),
                   ),
                 );
+                // Si se regresa de DetalleScreen con cambios (true), recargar colecciones
+                if (result == true) {
+                  await _loadColecciones();
+                  // Si hay filtro activo, recargar la lista
+                  if (_coleccionFiltroId != null) {
+                    _refresh();
+                  }
+                }
               },
             ),
           );
