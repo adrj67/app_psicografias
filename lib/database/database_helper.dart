@@ -15,68 +15,57 @@ class DatabaseHelper {
 
   static Database? _database;
   static bool _initialized = false;
+  static bool _initializing = false;
 
   Future<Database> get database async {
-    // Si ya tenemos la base de datos, la devolvemos
     if (_database != null) {
-      debugPrint('📀 Retornando base de datos existente');
       return _database!;
     }
     
-    // Inicializar sqflite para Windows (solo una vez)
+    if (_initializing) {
+      // Esperar a que termine la inicialización
+      await Future.delayed(const Duration(milliseconds: 50));
+      return _database!;
+    }
+    
+    _initializing = true;
+    
     if (!_initialized) {
-      debugPrint('🔧 Inicializando sqflite para Windows...');
       sqfliteFfiInit();
       databaseFactory = databaseFactoryFfi;
       _initialized = true;
-      debugPrint('✅ sqflite inicializado');
     }
     
-    // Inicializar la base de datos
     _database = await _initDatabase();
+    _initializing = false;
     return _database!;
   }
 
   Future<Database> _initDatabase() async {
-    debugPrint('📀 Inicializando base de datos (solo una vez)...');
-    
     try {
       Directory documentsDirectory = await getApplicationDocumentsDirectory();
       String path = join(documentsDirectory.path, AppConstants.databaseName);
-      debugPrint('📀 Ruta: $path');
       
       bool exists = await File(path).exists();
-      debugPrint('📀 ¿Existe archivo? $exists');
       
       if (!exists) {
-        debugPrint('📀 Copiando base de datos desde assets...');
         ByteData data = await rootBundle.load(AppConstants.databaseAssetPath);
-        debugPrint('📀 Asset cargado: ${data.lengthInBytes} bytes');
         List<int> bytes = data.buffer.asUint8List();
         await File(path).writeAsBytes(bytes);
-        debugPrint('✅ Base de datos copiada');
-      } else {
-        debugPrint('✅ Base de datos ya existe');
       }
       
-      debugPrint('📀 Abriendo base de datos...');
       final db = await openDatabase(path);
-      debugPrint('✅ Base de datos abierta');
       
-      // Crear tablas de colecciones (si no existen)
       await _createColeccionesTables(db);
+      await _createHistorialLecturaTable(db);
       
       return db;
     } catch (e) {
-      debugPrint('❌ Error: $e');
       rethrow;
     }
   }
 
   Future<void> _createColeccionesTables(Database db) async {
-    debugPrint('📀 Verificando tablas de colecciones...');
-    
-    // Tabla de colecciones
     await db.execute('''
       CREATE TABLE IF NOT EXISTS colecciones (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -86,7 +75,6 @@ class DatabaseHelper {
       )
     ''');
     
-    // Tabla intermedia
     await db.execute('''
       CREATE TABLE IF NOT EXISTS psicografia_coleccion (
         psicografia_id INTEGER,
@@ -96,70 +84,48 @@ class DatabaseHelper {
         FOREIGN KEY (coleccion_id) REFERENCES colecciones(id) ON DELETE CASCADE
       )
     ''');
-    
-    debugPrint('✅ Tablas de colecciones verificadas');
+  }
+
+  Future<void> _createHistorialLecturaTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS historial_lectura (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        psicografia_id INTEGER NOT NULL,
+        fecha_lectura TEXT NOT NULL,
+        FOREIGN KEY (psicografia_id) REFERENCES psicografias(id) ON DELETE CASCADE,
+        UNIQUE(psicografia_id)
+      )
+    ''');
   }
 
   // ============================================================
-  // MÉTODOS PARA PSICOGRAFÍAS
+  // PSICOGRAFÍAS
   // ============================================================
-
   Future<List<Map<String, dynamic>>> getPsicografias({int limit = 20, int offset = 0}) async {
     final db = await database;
-    return await db.query(
-      'psicografias',
-      limit: limit,
-      offset: offset,
-      orderBy: 'id ASC',
-    );
-  }
-
-  Future<int> getTotalCount() async {
-    final db = await database;
-    final result = await db.rawQuery('SELECT COUNT(*) as count FROM psicografias');
-    return Sqflite.firstIntValue(result) ?? 0;
-  }
-
-  Future<List<Map<String, dynamic>>> searchPsicografias(String query, {int limit = 20, int offset = 0}) async {
-    if (query.isEmpty) {
-      return getPsicografias(limit: limit, offset: offset);
-    }
-    
-    final db = await database;
-    return await db.query(
-      'psicografias',
-      where: 'mensaje LIKE ?',
-      whereArgs: ['%$query%'],
-      limit: limit,
-      offset: offset,
-      orderBy: 'id ASC',
-    );
+    return await db.query('psicografias', limit: limit, offset: offset, orderBy: 'id ASC');
   }
 
   Future<Map<String, dynamic>?> getPsicografiaById(int id) async {
     final db = await database;
-    final results = await db.query(
-      'psicografias',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    final results = await db.query('psicografias', where: 'id = ?', whereArgs: [id]);
     return results.isNotEmpty ? results.first : null;
   }
 
   Future<int> updateNotas(int id, String notas) async {
     final db = await database;
-    return await db.update(
-      'psicografias',
-      {'notas': notas},
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    return await db.update('psicografias', {'notas': notas}, where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<List<Map<String, dynamic>>> searchPsicografias(String query, {int limit = 20, int offset = 0}) async {
+    if (query.isEmpty) return getPsicografias(limit: limit, offset: offset);
+    final db = await database;
+    return await db.query('psicografias', where: 'mensaje LIKE ?', whereArgs: ['%$query%'], limit: limit, offset: offset, orderBy: 'id ASC');
   }
 
   // ============================================================
-  // MÉTODOS PARA COLECCIONES
+  // COLECCIONES
   // ============================================================
-
   Future<List<Coleccion>> getColecciones() async {
     final db = await database;
     final result = await db.query('colecciones', orderBy: 'nombre ASC');
@@ -188,26 +154,15 @@ class DatabaseHelper {
 
   Future<void> addPsicografiaToColeccion(int psicografiaId, int coleccionId) async {
     final db = await database;
-    await db.insert('psicografia_coleccion', {
-      'psicografia_id': psicografiaId,
-      'coleccion_id': coleccionId,
-    });
+    await db.insert('psicografia_coleccion', {'psicografia_id': psicografiaId, 'coleccion_id': coleccionId});
   }
 
   Future<void> removePsicografiaFromColeccion(int psicografiaId, int coleccionId) async {
     final db = await database;
-    await db.delete(
-      'psicografia_coleccion',
-      where: 'psicografia_id = ? AND coleccion_id = ?',
-      whereArgs: [psicografiaId, coleccionId],
-    );
+    await db.delete('psicografia_coleccion', where: 'psicografia_id = ? AND coleccion_id = ?', whereArgs: [psicografiaId, coleccionId]);
   }
 
-  Future<List<Map<String, dynamic>>> getPsicografiasByColeccion(
-    int coleccionId, {
-    int limit = 20,
-    int offset = 0,
-  }) async {
+  Future<List<Map<String, dynamic>>> getPsicografiasByColeccion(int coleccionId, {int limit = 20, int offset = 0}) async {
     final db = await database;
     return await db.rawQuery('''
       SELECT p.* FROM psicografias p
@@ -216,5 +171,32 @@ class DatabaseHelper {
       ORDER BY p.id ASC
       LIMIT ? OFFSET ?
     ''', [coleccionId, limit, offset]);
+  }
+
+  // ============================================================
+  // HISTORIAL DE LECTURAS
+  // ============================================================
+  Future<void> marcarComoLeida(int psicografiaId) async {
+    final db = await database;
+    await db.insert('historial_lectura', {
+      'psicografia_id': psicografiaId,
+      'fecha_lectura': DateTime.now().toIso8601String(),
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  Future<int> getTotalLeidas() async {
+    final db = await database;
+    final result = await db.rawQuery('SELECT COUNT(*) as total FROM historial_lectura');
+    return Sqflite.firstIntValue(result) ?? 0;
+  }
+
+  Future<bool> isLeida(int psicografiaId) async {
+    final db = await database;
+    final result = await db.query(
+      'historial_lectura',
+      where: 'psicografia_id = ?',
+      whereArgs: [psicografiaId],
+    );
+    return result.isNotEmpty;
   }
 }

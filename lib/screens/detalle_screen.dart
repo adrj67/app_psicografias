@@ -36,6 +36,8 @@ class _DetalleScreenState extends State<DetalleScreen> {
   List<Coleccion> _coleccionesDisponibles = [];
   List<Coleccion> _coleccionesSeleccionadas = [];
 
+  bool _fueLeida = false;
+
   @override
   void initState() {
     super.initState();
@@ -53,11 +55,22 @@ class _DetalleScreenState extends State<DetalleScreen> {
       final data = await _dbHelper.getPsicografiaById(widget.psicografiaId);
       if (data != null) {
         final psicografia = Psicografia.fromMap(data);
+        
+        // Verificar si ya estaba leída antes de marcarla
+        final yaLeida = await _dbHelper.isLeida(widget.psicografiaId);
+        
         setState(() {
           _psicografia = psicografia;
           _notasController = TextEditingController(text: psicografia.notas ?? '');
           _isLoading = false;
         });
+        
+        // Marcar como leída (solo la primera vez)
+        if (!yaLeida) {
+          await _dbHelper.marcarComoLeida(widget.psicografiaId);
+          _fueLeida = true;  // <- Marcar que es nueva lectura
+        }
+        
         await _loadColecciones();
       } else {
         setState(() {
@@ -152,6 +165,18 @@ class _DetalleScreenState extends State<DetalleScreen> {
 
   @override
   Widget build(BuildContext context) {
+    return PopScope(
+    canPop: false,  // Prevenir el pop automático
+    onPopInvokedWithResult: (didPop, result) async {
+      if (didPop) return;
+      // Retornar true si fue la primera vez que se leyó
+      Navigator.pop(context, _fueLeida);
+    },
+      child: _buildScaffold(),
+    );
+  }
+
+  Widget _buildScaffold() {
     if (_isLoading) {
       return Scaffold(
         appBar: AppBar(
@@ -170,7 +195,7 @@ class _DetalleScreenState extends State<DetalleScreen> {
           backgroundColor: Theme.of(context).primaryColor,
           foregroundColor: Colors.white,
         ),
-        body: ErrorMessageWidget(message: _errorMessage!),
+        body: Center(child: Text(_errorMessage!)),
       );
     }
     
@@ -201,19 +226,12 @@ class _DetalleScreenState extends State<DetalleScreen> {
           children: [
             _buildHeaderRow(psicografia),
             const SizedBox(height: 20),
-            
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  flex: 3,
-                  child: _buildImagenColumn(psicografia),
-                ),
+                Expanded(flex: 3, child: _buildImagenColumn(psicografia)),
                 const SizedBox(width: 16),
-                Expanded(
-                  flex: 7,
-                  child: _buildTextColumn(psicografia),
-                ),
+                Expanded(flex: 7, child: _buildTextColumn(psicografia)),
               ],
             ),
           ],
