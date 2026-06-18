@@ -4,8 +4,7 @@ class AppConstants {
   // Base de datos
   static const String databaseName = 'psicografias.db';
   static const String databaseAssetPath = 'assets/database/psicografias.db';
-  //static const String ubicacionBDOriginal = 'C:/Users/adrj/Escritorio/Argentina Programa/Flutter/BSP/BD/psicografias_texto.csv';
-  
+    
   // Paginación
   static const int pageSize = 20;
   

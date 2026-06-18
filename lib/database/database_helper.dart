@@ -8,6 +8,10 @@ import 'package:flutter/foundation.dart';
 import '../models/coleccion.dart';
 import '../utils/constants.dart';
 
+/// Para resetear las psicos leidas
+///sqlite3 "$env:USERPROFILE\OneDrive\Documentos\psicografias.db" "DELETE FROM historial_lectura;"
+ 
+
 class DatabaseHelper {
   static final DatabaseHelper _instance = DatabaseHelper._internal();
   factory DatabaseHelper() => _instance;
@@ -47,11 +51,16 @@ class DatabaseHelper {
       String path = join(documentsDirectory.path, AppConstants.databaseName);
       
       bool exists = await File(path).exists();
+      debugPrint('📀 ¿Existe BD en Documentos? $exists');
       
       if (!exists) {
+        debugPrint('📀 Copiando BD desde assets a Documentos...');
         ByteData data = await rootBundle.load(AppConstants.databaseAssetPath);
         List<int> bytes = data.buffer.asUint8List();
         await File(path).writeAsBytes(bytes);
+        debugPrint('✅ BD copiada exitosamente');
+      } else {
+        debugPrint('✅ Usando BD existente en Documentos');
       }
       
       final db = await openDatabase(path);
@@ -61,6 +70,7 @@ class DatabaseHelper {
       
       return db;
     } catch (e) {
+      debugPrint('❌ Error en _initDatabase: $e');
       rethrow;
     }
   }
@@ -198,5 +208,20 @@ class DatabaseHelper {
       whereArgs: [psicografiaId],
     );
     return result.isNotEmpty;
+  }
+
+  // ============================================================
+  // MÉTODOS PARA RESETEO DE LECTURAS (DEBUG)
+  // ============================================================
+
+  Future<void> resetearLecturas() async {
+    final db = await database;
+    await db.delete('historial_lectura');
+    debugPrint('✅ Todas las lecturas han sido reseteadas');
+  }
+
+  Future<void> deleteColeccion(int coleccionId) async {
+    final db = await database;
+    await db.delete('colecciones', where: 'id = ?', whereArgs: [coleccionId]);
   }
 }
