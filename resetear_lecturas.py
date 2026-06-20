@@ -1,8 +1,16 @@
 import sqlite3
 import os
 
+# Para ejecutar
+# python resetear_lecturas.py
+
 # Ruta de la base de datos (relativa al script)
-DB_PATH = 'assets/database/psicografias.db'
+# DB_PATH = 'assets/database/psicografias.db' # base de datos original, no se modifica
+
+# Ruta de la base de datos (donde hace una copia de la bd que se usa despues)
+DB_PATH = 'C:/Users/adrj/OneDrive/Documentos/psicografias.db'
+
+
 
 def resetear_lecturas():
     """Elimina todos los registros del historial de lecturas"""

@@ -188,9 +188,11 @@ class DatabaseHelper {
   // ============================================================
   Future<void> marcarComoLeida(int psicografiaId) async {
     final db = await database;
+    // Usar hora local en formato ISO con zona horaria
+    final ahora = DateTime.now().toLocal().toIso8601String();
     await db.insert('historial_lectura', {
       'psicografia_id': psicografiaId,
-      'fecha_lectura': DateTime.now().toIso8601String(),
+      'fecha_lectura': ahora,
     }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
@@ -223,5 +225,39 @@ class DatabaseHelper {
   Future<void> deleteColeccion(int coleccionId) async {
     final db = await database;
     await db.delete('colecciones', where: 'id = ?', whereArgs: [coleccionId]);
+  }
+
+  Future<int> getTotalPsicografiasByColeccion(int coleccionId) async {
+    final db = await database;
+    final result = await db.rawQuery('''
+      SELECT COUNT(*) as total FROM psicografias p
+      INNER JOIN psicografia_coleccion pc ON p.id = pc.psicografia_id
+      WHERE pc.coleccion_id = ?
+    ''', [coleccionId]);
+    return Sqflite.firstIntValue(result) ?? 0;
+  }
+
+  // ============================================================
+  // MÉTODOS PARA HISTORIAL DE LECTURAS
+  // ============================================================
+
+  Future<List<Map<String, dynamic>>> getHistorialLecturas({
+      bool ordenAscendente = false,
+  }) async {
+    final db = await database;
+    final orderBy = ordenAscendente ? 'fecha_lectura ASC' : 'fecha_lectura DESC';
+    
+    return await db.rawQuery('''
+      SELECT p.*, h.fecha_lectura 
+      FROM psicografias p
+      INNER JOIN historial_lectura h ON p.id = h.psicografia_id
+      ORDER BY $orderBy
+    ''');
+  }
+
+  Future<List<int>> getIdsLeidas() async {
+    final db = await database;
+    final result = await db.query('historial_lectura', columns: ['psicografia_id']);
+    return result.map((row) => row['psicografia_id'] as int).toList();
   }
 }

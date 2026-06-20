@@ -1,3 +1,4 @@
+import 'package:app_psicografias/screens/coleccion_detalle_screen.dart';
 import 'package:flutter/material.dart';
 import '../database/database_helper.dart';
 import '../models/coleccion.dart';
@@ -355,16 +356,16 @@ class _ColeccionesScreenState extends State<ColeccionesScreen> {
               ],
             ),
             onTap: () {
-              // Cerrar pantalla y pasar el ID de la coleccion
-              Navigator.pop(context, coleccion.id);
-              // TODO: Ver psicografías de esta colección
-              /* ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Ver psicografías de "${coleccion.nombre}"'),
-                  duration: const Duration(seconds: 1),
+            // ✅ Abrir detalle de la colección
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ColeccionDetalleScreen(
+                  coleccion: coleccion,
                 ),
-              );*/
-            },
+              ),
+            );
+          },
           ),
         );
       },

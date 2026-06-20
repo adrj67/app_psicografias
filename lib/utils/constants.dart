@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
 class AppConstants {
+  // Total Psicografias
+  static const int totalPsicografias = 1313;
+
   // Base de datos
   static const String databaseName = 'psicografias.db';
   static const String databaseAssetPath = 'assets/database/psicografias.db';
@@ -26,15 +29,17 @@ class AppConstants {
   static const Color primaryLight = Color(0xFF6B2D8A);      // Morado principal
   static const Color primaryLightLight = Color(0xFF8B4DAA); // Morado más claro
   static const Color accentLight = Color(0xFFE65100);       // Naranja acento
+  static const Color amberLight = Color(0xFFFF8F00);        // Ámbar para resaltar
   static const Color backgroundLight = Color.fromARGB(248, 233, 216, 240);
   static const Color surfaceLight = Colors.white;
   static const Color textLight = Color(0xFF1A1A1A);
   static const Color textHintLight = Color(0xFF757575);
-  
+
   // Colores personalizados - Tema Oscuro
   static const Color primaryDark = Color(0xFF9B6DB5);       // Morado más brillante
   static const Color primaryDarkDark = Color(0xFF7B4D95);   // Morado medio
   static const Color accentDark = Color(0xFFFF8C42);        // Naranja más brillante
+  static const Color amberDark = Color(0xFFFFAB00);         // Ámbar más brillante
   static const Color backgroundDark = Color(0xFF121212);
   static const Color surfaceDark = Color.fromARGB(255, 53, 53, 53);
   static const Color textDark = Color(0xFFEEEEEE);

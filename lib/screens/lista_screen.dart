@@ -1,3 +1,5 @@
+import 'package:app_psicografias/screens/historial_lecturas_screen.dart';
+import 'package:app_psicografias/screens/no_leidas_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../database/database_helper.dart';
@@ -28,7 +30,7 @@ class _ListaScreenState extends State<ListaScreen> {
   int? _coleccionFiltroId;
 
   int _totalLeidas = 0;
-  final int _totalTotal = 1313;
+  final int _totalTotal = AppConstants.totalPsicografias; // 1313;
 
   Map<int, bool> _lecturasCache = {};
 
@@ -168,7 +170,7 @@ class _ListaScreenState extends State<ListaScreen> {
       _currentPage = 0;
       _hasMore = true;
       _psicografias = [];
-      // Mantener _searchQuery y _coleccionFiltroId
+      _lecturasCache = {};  // ✅ Limpiar cache para forzar recarga
       _isLoading = true;
     });
     _cargarDatosIniciales();
@@ -201,6 +203,36 @@ class _ListaScreenState extends State<ListaScreen> {
         backgroundColor: Theme.of(context).primaryColor,
         foregroundColor: Colors.white,
         actions: [
+          // Botón de No Leídas
+          IconButton(
+            icon: const Icon(Icons.radio_button_unchecked),
+            tooltip: 'Psicografías No Leídas',
+            onPressed: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const NoLeidasScreen(),
+                ),
+              );
+              // ✅ Recargar lista al volver
+              _refresh();
+            },
+          ),
+          // Botón de Historial de Lecturas
+          IconButton(
+            icon: const Icon(Icons.history),
+            tooltip: 'Historial de Lecturas',
+            onPressed: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const HistorialLecturasScreen(),
+                ),
+              );
+              // ✅ Recargar lista al volver
+              _refresh();
+            },
+          ),
           // Botón de Colecciones
           IconButton(
             icon: const Icon(Icons.collections_bookmark),
@@ -259,7 +291,7 @@ class _ListaScreenState extends State<ListaScreen> {
             },
           ),
           // Botón de filtro
-          PopupMenuButton<int?>(
+          /* PopupMenuButton<int?>(
             icon: Stack(
               children: [
                 const Icon(Icons.filter_alt),
@@ -327,7 +359,7 @@ class _ListaScreenState extends State<ListaScreen> {
               if (_colecciones.isNotEmpty) const PopupMenuDivider(),
               ..._colecciones.map((c) => PopupMenuItem(value: c.id, child: Text(c.nombre))),
             ],
-          ),
+          ),*/
         ],
       ),
       body: Column(
