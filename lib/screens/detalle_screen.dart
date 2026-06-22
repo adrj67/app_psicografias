@@ -86,7 +86,7 @@ class _DetalleScreenState extends State<DetalleScreen> {
     }
   }
 
-  Future<void> _loadColecciones() async {
+  /*Future<void> _loadColecciones() async {
     if (_psicografia == null) return;
     
     try {
@@ -101,6 +101,31 @@ class _DetalleScreenState extends State<DetalleScreen> {
       }
     } catch (e) {
       debugPrint('Error cargando colecciones: $e');
+    }
+  }*/
+  Future<void> _loadColecciones() async {
+    if (_psicografia == null) {
+      debugPrint('⚠️ _psicografia es null, no se pueden cargar colecciones');
+      return;
+    }
+    
+    try {
+      debugPrint('📚 Cargando colecciones para psicografia ID: ${_psicografia!.id}');
+      
+      final disponibles = await _dbHelper.getColecciones();
+      debugPrint('📚 Colecciones disponibles: ${disponibles.length}');
+      
+      final seleccionadas = await _dbHelper.getColeccionesByPsicografiaId(_psicografia!.id);
+      debugPrint('📚 Colecciones seleccionadas: ${seleccionadas.length}');
+      
+      if (mounted) {
+        setState(() {
+          _coleccionesDisponibles = disponibles;
+          _coleccionesSeleccionadas = seleccionadas;
+        });
+      }
+    } catch (e) {
+      debugPrint('❌ Error cargando colecciones: $e');
     }
   }
 
@@ -466,14 +491,27 @@ class _DetalleScreenState extends State<DetalleScreen> {
             children: [
               TextField(
                 controller: _notasController,
-                maxLines: 4,
+                maxLines: 6,
                 decoration: InputDecoration(
                   hintText: 'Escribe tus notas aquí...',
+                  hintStyle: TextStyle(
+                    color: Theme.of(context).brightness == Brightness.light
+                        ? Colors.grey.shade600
+                        : Colors.grey.shade400,
+                  ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide.none,
                   ),
                   filled: true,
-                  fillColor: Colors.white,
+                  fillColor: Theme.of(context).brightness == Brightness.light
+                      ? Colors.white
+                      : Colors.grey.shade800,
+                ),
+                style: TextStyle(
+                  color: Theme.of(context).brightness == Brightness.light
+                      ? Colors.black87
+                      : Colors.white,
                 ),
               ),
               if (_isSaving)
@@ -487,9 +525,15 @@ class _DetalleScreenState extends State<DetalleScreen> {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: Colors.amber.withValues(alpha: 0.1),
+              color: Theme.of(context).brightness == Brightness.light
+                  ? Colors.amber.withValues(alpha: 0.1)
+                  : Colors.amber.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
+              border: Border.all(
+                color: Theme.of(context).brightness == Brightness.light
+                    ? Colors.amber.withValues(alpha: 0.3)
+                    : Colors.amber.withValues(alpha: 0.2),
+              ),
             ),
             child: SelectableText(
               psicografia.notas == null || psicografia.notas!.isEmpty 
@@ -501,8 +545,12 @@ class _DetalleScreenState extends State<DetalleScreen> {
                     ? FontStyle.italic 
                     : FontStyle.normal,
                 color: psicografia.notas == null || psicografia.notas!.isEmpty 
-                    ? Colors.grey 
-                    : Colors.black87,
+                    ? Theme.of(context).brightness == Brightness.light
+                        ? Colors.grey
+                        : Colors.grey.shade500
+                    : Theme.of(context).brightness == Brightness.light
+                        ? Colors.black87
+                        : Colors.white,
               ),
             ),
           ),

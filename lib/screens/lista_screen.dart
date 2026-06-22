@@ -1,5 +1,3 @@
-import 'package:app_psicografias/screens/historial_lecturas_screen.dart';
-import 'package:app_psicografias/screens/no_leidas_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../database/database_helper.dart';
@@ -8,6 +6,8 @@ import '../models/coleccion.dart';
 import '../utils/constants.dart';
 import '../providers/theme_provider.dart';
 import 'detalle_screen.dart';
+import 'historial_lecturas_screen.dart';
+import 'no_leidas_screen.dart';
 import 'colecciones_screen.dart';
 
 class ListaScreen extends StatefulWidget {
@@ -27,16 +27,16 @@ class _ListaScreenState extends State<ListaScreen> {
   String? _errorMessage;
   
   List<Coleccion> _colecciones = [];
-  int? _coleccionFiltroId;
 
   int _totalLeidas = 0;
-  final int _totalTotal = AppConstants.totalPsicografias; // 1313;
+  final int _totalTotal = AppConstants.totalPsicografias;
 
   Map<int, bool> _lecturasCache = {};
-
   bool _busquedaActiva = false;
   
   final ScrollController _scrollController = ScrollController();
+
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
@@ -47,6 +47,7 @@ class _ListaScreenState extends State<ListaScreen> {
 
   @override
   void dispose() {
+    _searchController.dispose();
     _scrollController.dispose();
     super.dispose();
   }
@@ -67,31 +68,18 @@ class _ListaScreenState extends State<ListaScreen> {
     });
 
     try {
-      List<Map<String, dynamic>> data;
-      
-      // 🔥 APLICAR FILTRO SI EXISTE
-      if (_coleccionFiltroId != null) {
-        data = await _dbHelper.getPsicografiasByColeccion(
-          _coleccionFiltroId!,
-          limit: AppConstants.pageSize,
-          offset: 0,
-        );
-      } else {
-        data = await _dbHelper.getPsicografias(
-          limit: AppConstants.pageSize,
-          offset: 0,
-        );
-      }
+      final data = await _dbHelper.getPsicografias(
+        limit: AppConstants.pageSize,
+        offset: 0,
+      );
       
       final nuevos = data.map((e) => Psicografia.fromMap(e)).toList();
-      
-      // Cargar estados de lectura para estas psicografías
+
       final Map<int, bool> lecturas = {};
       for (var p in nuevos) {
         lecturas[p.id] = await _dbHelper.isLeida(p.id);
       }
       
-      // Cargar colecciones y estadísticas
       final cols = await _dbHelper.getColecciones();
       final leidas = await _dbHelper.getTotalLeidas();
       
@@ -121,30 +109,13 @@ class _ListaScreenState extends State<ListaScreen> {
     });
 
     try {
-      List<Map<String, dynamic>> data;
-      
-      if (_coleccionFiltroId != null) {
-        data = await _dbHelper.getPsicografiasByColeccion(
-          _coleccionFiltroId!,
-          limit: AppConstants.pageSize,
-          offset: _currentPage * AppConstants.pageSize,
-        );
-      } else if (_searchQuery.isNotEmpty) {
-        data = await _dbHelper.searchPsicografias(
-          _searchQuery,
-          limit: AppConstants.pageSize,
-          offset: _currentPage * AppConstants.pageSize,
-        );
-      } else {
-        data = await _dbHelper.getPsicografias(
-          limit: AppConstants.pageSize,
-          offset: _currentPage * AppConstants.pageSize,
-        );
-      }
+      final data = await _dbHelper.getPsicografias(
+        limit: AppConstants.pageSize,
+        offset: _currentPage * AppConstants.pageSize,
+      );
       
       final nuevos = data.map((e) => Psicografia.fromMap(e)).toList();
       
-      // Cargar estados de lectura para las nuevas psicografías
       final Map<int, bool> nuevasLecturas = {};
       for (var p in nuevos) {
         nuevasLecturas[p.id] = await _dbHelper.isLeida(p.id);
@@ -170,18 +141,7 @@ class _ListaScreenState extends State<ListaScreen> {
       _currentPage = 0;
       _hasMore = true;
       _psicografias = [];
-      _lecturasCache = {};  // ✅ Limpiar cache para forzar recarga
-      _isLoading = true;
-    });
-    _cargarDatosIniciales();
-  }
-
-  void _limpiarFiltro() {
-    setState(() {
-      _coleccionFiltroId = null;
-      _currentPage = 0;
-      _hasMore = true;
-      _psicografias = [];
+      _lecturasCache = {};
       _searchQuery = '';
       _isLoading = true;
     });
@@ -203,7 +163,7 @@ class _ListaScreenState extends State<ListaScreen> {
         backgroundColor: Theme.of(context).primaryColor,
         foregroundColor: Colors.white,
         actions: [
-          // Botón de No Leídas
+          // Botón No Leídas
           IconButton(
             icon: const Icon(Icons.radio_button_unchecked),
             tooltip: 'Psicografías No Leídas',
@@ -214,11 +174,10 @@ class _ListaScreenState extends State<ListaScreen> {
                   builder: (context) => const NoLeidasScreen(),
                 ),
               );
-              // ✅ Recargar lista al volver
               _refresh();
             },
           ),
-          // Botón de Historial de Lecturas
+          // Botón Historial
           IconButton(
             icon: const Icon(Icons.history),
             tooltip: 'Historial de Lecturas',
@@ -229,41 +188,28 @@ class _ListaScreenState extends State<ListaScreen> {
                   builder: (context) => const HistorialLecturasScreen(),
                 ),
               );
-              // ✅ Recargar lista al volver
               _refresh();
             },
           ),
-          // Botón de Colecciones
+          // Botón Colecciones
           IconButton(
             icon: const Icon(Icons.collections_bookmark),
             tooltip: 'Gestionar Colecciones',
             onPressed: () async {
-              final coleccionId = await Navigator.push(
+              await Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (context) => const ColeccionesScreen(),
                 ),
               );
-              
-              // Si se seleccionó una colección, aplicar filtro
-              if (coleccionId != null && coleccionId is int) {
-                setState(() {
-                  _coleccionFiltroId = coleccionId;
-                  _currentPage = 0;
-                  _hasMore = true;
-                  _psicografias = [];
-                  _searchQuery = '';
-                  _isLoading = true;
-                });
-                await _cargarDatosIniciales();
-              }
+              _refresh();
             },
           ),
-          // Botón para limpiar búsqueda
+          /*// Botón limpiar búsqueda
           if (_searchQuery.isNotEmpty)
             IconButton(
               icon: const Icon(Icons.clear),
-              tooltip: 'Borrar Busqueda',
+              tooltip: 'Borrar Búsqueda',
               onPressed: () {
                 setState(() {
                   _searchQuery = '';
@@ -272,13 +218,13 @@ class _ListaScreenState extends State<ListaScreen> {
                   _hasMore = true;
                   _psicografias = [];
                   _lecturasCache = {};
-                  _coleccionFiltroId = null;
                   _isLoading = true;
                 });
                 _cargarDatosIniciales();
               },
             ),
-          // Botón de tema
+            */
+          // Botón tema
           IconButton(
             icon: Icon(
               Provider.of<ThemeProvider>(context).themeMode == ThemeMode.light
@@ -290,76 +236,6 @@ class _ListaScreenState extends State<ListaScreen> {
               Provider.of<ThemeProvider>(context, listen: false).toggleTheme();
             },
           ),
-          // Botón de filtro
-          /* PopupMenuButton<int?>(
-            icon: Stack(
-              children: [
-                const Icon(Icons.filter_alt),
-                if (_coleccionFiltroId != null)
-                  Positioned(
-                    right: 0,
-                    top: 0,
-                    child: Container(
-                      width: 10,
-                      height: 10,
-                      decoration: const BoxDecoration(
-                        color: Colors.red,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            tooltip: 'Colecciones',
-            onSelected: (value) async {
-              setState(() {
-                _coleccionFiltroId = value;
-                _currentPage = 0;
-                _hasMore = true;
-                _psicografias = [];
-                _searchQuery = '';
-                _isLoading = true;
-              });
-              
-              try {
-                List<Map<String, dynamic>> data;
-                
-                if (value != null) {
-                  data = await _dbHelper.getPsicografiasByColeccion(
-                    value,
-                    limit: AppConstants.pageSize,
-                    offset: 0,
-                  );
-                } else {
-                  data = await _dbHelper.getPsicografias(
-                    limit: AppConstants.pageSize,
-                    offset: 0,
-                  );
-                }
-                
-                final nuevos = data.map((e) => Psicografia.fromMap(e)).toList();
-                
-                setState(() {
-                  _psicografias = nuevos;
-                  _hasMore = nuevos.length == AppConstants.pageSize;
-                  _currentPage = 1;
-                  _isLoading = false;
-                });
-                
-              } catch (e) {
-                print('Error en filtro: $e');
-                setState(() {
-                  _isLoading = false;
-                  _errorMessage = 'Error al filtrar: $e';
-                });
-              }
-            },
-            itemBuilder: (context) => [
-              const PopupMenuItem(value: null, child: Text('Todas las psicografías')),
-              if (_colecciones.isNotEmpty) const PopupMenuDivider(),
-              ..._colecciones.map((c) => PopupMenuItem(value: c.id, child: Text(c.nombre))),
-            ],
-          ),*/
         ],
       ),
       body: Column(
@@ -368,9 +244,28 @@ class _ListaScreenState extends State<ListaScreen> {
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: TextField(
+              controller: _searchController,  // ← AGREGAR ESTA LÍNEA
               decoration: InputDecoration(
                 hintText: AppConstants.searchHint,
                 prefixIcon: Icon(Icons.search, color: Theme.of(context).hintColor),
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          setState(() {
+                            _searchController.clear();  // ← Limpiar el campo visualmente
+                            _searchQuery = '';
+                            _busquedaActiva = false;
+                            _currentPage = 0;
+                            _hasMore = true;
+                            _psicografias = [];
+                            _lecturasCache = {};
+                            _isLoading = true;
+                          });
+                          _cargarDatosIniciales();  // Mostrar todas
+                        },
+                      )
+                    : null,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
                   borderSide: BorderSide.none,
@@ -384,9 +279,8 @@ class _ListaScreenState extends State<ListaScreen> {
                   _currentPage = 0;
                   _hasMore = true;
                   _psicografias = [];
-                  _coleccionFiltroId = null;
                   _isLoading = true;
-                  _busquedaActiva = value.isNotEmpty;  // ← Marcar búsqueda activa
+                  _busquedaActiva = value.isNotEmpty;
                 });
                 
                 try {
@@ -398,8 +292,14 @@ class _ListaScreenState extends State<ListaScreen> {
                   
                   final nuevos = data.map((e) => Psicografia.fromMap(e)).toList();
                   
+                  final Map<int, bool> lecturas = {};
+                  for (var p in nuevos) {
+                    lecturas[p.id] = await _dbHelper.isLeida(p.id);
+                  }
+                  
                   setState(() {
                     _psicografias = nuevos;
+                    _lecturasCache = lecturas;
                     _hasMore = nuevos.length == AppConstants.pageSize;
                     _currentPage = 1;
                     _isLoading = false;
@@ -462,37 +362,6 @@ class _ListaScreenState extends State<ListaScreen> {
             ),
           ),
           
-          // Filtro activo
-          if (_coleccionFiltroId != null)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8.0),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).brightness == Brightness.light 
-                      ? Colors.white 
-                      : Colors.grey.shade800,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.filter_alt, size: 14, color: Theme.of(context).primaryColor),
-                      const SizedBox(width: 4),
-                      Text('Filtrado por: ${_colecciones.firstWhere((c) => c.id == _coleccionFiltroId).nombre}', style: const TextStyle(fontSize: 12)),
-                      const SizedBox(width: 4),
-                      GestureDetector(
-                        onTap: _limpiarFiltro,
-                        child: const Icon(Icons.close, size: 14, color: Colors.red),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          
           // Lista
           Expanded(child: _buildLista()),
         ],
@@ -554,7 +423,6 @@ class _ListaScreenState extends State<ListaScreen> {
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Icono de lectura
                   Icon(
                     estaLeida ? Icons.check_circle : Icons.radio_button_unchecked,
                     color: estaLeida ? Colors.green : Colors.grey,
@@ -564,52 +432,51 @@ class _ListaScreenState extends State<ListaScreen> {
                   const Icon(Icons.chevron_right),
                 ],
               ),
-
               onTap: () async {
                 final result = await Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => DetalleScreen(psicografiaId: p.id)),
                 );
                 
-                // Si hubo cambios (nueva lectura, colección, notas)
                 if (result == true) {
-                  // 🔥 ACTUALIZAR CACHÉ DE LECTURA PARA TODAS LAS PSICOGRAFÍAS VISIBLES
+                  // Actualizar cache de lecturas
                   final Map<int, bool> nuevasLecturas = {};
                   for (var psico in _psicografias) {
                     nuevasLecturas[psico.id] = await _dbHelper.isLeida(psico.id);
                   }
                   
-                  // Actualizar estadísticas
                   final nuevasLeidas = await _dbHelper.getTotalLeidas();
                   
                   setState(() {
-                    _lecturasCache = nuevasLecturas;  // ← ACTUALIZAR CACHÉ
+                    _lecturasCache = nuevasLecturas;
                     _totalLeidas = nuevasLeidas;
-                    _searchQuery = '';  // ← BORRAR BÚSQUEDA
-                    _busquedaActiva = false;
                   });
                 }
                 
-                // Recargar la lista actual (manteniendo filtro/búsqueda)
+                // ✅ RECARGAR CON EL FILTRO ACTUAL (manteniendo búsqueda)
                 await _recargarConFiltroActual();
               },
-
-              /*onTap: () async {
+              /* onTap: () async {
                 final result = await Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => DetalleScreen(psicografiaId: p.id)),
                 );
-
-                // Si se hizo algún cambio en detalle (colección, notas, lectura)
+                
                 if (result == true) {
-                  // Recargar psicografías manteniendo el filtro actual
-                  await _recargarConFiltroActual();
-                  // Actualizar estadísticas
+                  final Map<int, bool> nuevasLecturas = {};
+                  for (var psico in _psicografias) {
+                    nuevasLecturas[psico.id] = await _dbHelper.isLeida(psico.id);
+                  }
+                  
                   final nuevasLeidas = await _dbHelper.getTotalLeidas();
+                  
                   setState(() {
+                    _lecturasCache = nuevasLecturas;
                     _totalLeidas = nuevasLeidas;
                   });
                 }
+                
+                await _cargarDatosIniciales();
               },*/
             ),
           );
@@ -617,7 +484,6 @@ class _ListaScreenState extends State<ListaScreen> {
       ),
     );
   }
-
   Future<void> _recargarConFiltroActual() async {
     setState(() {
       _isLoading = true;
@@ -626,16 +492,10 @@ class _ListaScreenState extends State<ListaScreen> {
     try {
       List<Map<String, dynamic>> data;
       
-      // Prioridad: búsqueda activa > colección filtro > todos
+      // ✅ Si hay búsqueda activa, aplicar filtro
       if (_searchQuery.isNotEmpty) {
         data = await _dbHelper.searchPsicografias(
           _searchQuery,
-          limit: AppConstants.pageSize,
-          offset: 0,
-        );
-      } else if (_coleccionFiltroId != null) {
-        data = await _dbHelper.getPsicografiasByColeccion(
-          _coleccionFiltroId!,
           limit: AppConstants.pageSize,
           offset: 0,
         );
@@ -648,8 +508,15 @@ class _ListaScreenState extends State<ListaScreen> {
       
       final nuevos = data.map((e) => Psicografia.fromMap(e)).toList();
       
+      // Recargar cache de lecturas
+      final Map<int, bool> lecturas = {};
+      for (var p in nuevos) {
+        lecturas[p.id] = await _dbHelper.isLeida(p.id);
+      }
+      
       setState(() {
         _psicografias = nuevos;
+        _lecturasCache = lecturas;
         _hasMore = nuevos.length == AppConstants.pageSize;
         _currentPage = 1;
         _isLoading = false;
