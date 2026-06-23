@@ -34,6 +34,16 @@ class _ColeccionSelectorState extends State<ColeccionSelector> {
     _seleccionadas = List.from(widget.coleccionesSeleccionadas);
   }
 
+  void didUpdateWidget(ColeccionSelector oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // ✅ Actualizar cuando cambian las colecciones seleccionadas desde el padre
+    if (oldWidget.coleccionesSeleccionadas != widget.coleccionesSeleccionadas) {
+      setState(() {
+        _seleccionadas = List.from(widget.coleccionesSeleccionadas);
+      });
+    }
+  }
+
   @override
   void dispose() {
     _nuevaColeccionController.dispose();

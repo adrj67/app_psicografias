@@ -56,7 +56,6 @@ class _DetalleScreenState extends State<DetalleScreen> {
       if (data != null) {
         final psicografia = Psicografia.fromMap(data);
         
-        // Verificar si ya estaba leída antes de marcarla
         final yaLeida = await _dbHelper.isLeida(widget.psicografiaId);
         
         setState(() {
@@ -65,13 +64,20 @@ class _DetalleScreenState extends State<DetalleScreen> {
           _isLoading = false;
         });
         
-        // Marcar como leída (solo la primera vez)
         if (!yaLeida) {
           await _dbHelper.marcarComoLeida(widget.psicografiaId);
-          _fueLeida = true;  // <- Marcar que es nueva lectura
+          _fueLeida = true;
         }
         
-        await _loadColecciones();
+        // ✅ FORMA 1: Usar addPostFrameCallback (recomendado)
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _loadColecciones();
+        });
+        
+        // ✅ FORMA 2: Usar Future.delayed (alternativa)
+        // await Future.delayed(const Duration(milliseconds: 100));
+        // await _loadColecciones();
+        
       } else {
         setState(() {
           _errorMessage = 'No se encontró la psicografía';
@@ -86,23 +92,6 @@ class _DetalleScreenState extends State<DetalleScreen> {
     }
   }
 
-  /*Future<void> _loadColecciones() async {
-    if (_psicografia == null) return;
-    
-    try {
-      final disponibles = await _dbHelper.getColecciones();
-      final seleccionadas = await _dbHelper.getColeccionesByPsicografiaId(_psicografia!.id);
-      
-      if (mounted) {
-        setState(() {
-          _coleccionesDisponibles = disponibles;
-          _coleccionesSeleccionadas = seleccionadas;
-        });
-      }
-    } catch (e) {
-      debugPrint('Error cargando colecciones: $e');
-    }
-  }*/
   Future<void> _loadColecciones() async {
     if (_psicografia == null) {
       debugPrint('⚠️ _psicografia es null, no se pueden cargar colecciones');
@@ -117,12 +106,17 @@ class _DetalleScreenState extends State<DetalleScreen> {
       
       final seleccionadas = await _dbHelper.getColeccionesByPsicografiaId(_psicografia!.id);
       debugPrint('📚 Colecciones seleccionadas: ${seleccionadas.length}');
+
+      for (var col in seleccionadas) {
+        debugPrint('   - ${col.nombre}');
+      }
       
       if (mounted) {
         setState(() {
           _coleccionesDisponibles = disponibles;
           _coleccionesSeleccionadas = seleccionadas;
         });
+        debugPrint('✅ State actualizado con ${_coleccionesSeleccionadas.length} colecciones');
       }
     } catch (e) {
       debugPrint('❌ Error cargando colecciones: $e');
@@ -411,6 +405,7 @@ class _DetalleScreenState extends State<DetalleScreen> {
         
         // Selector de Colecciones
         ColeccionSelector(
+          key: ValueKey(_coleccionesSeleccionadas.length), 
           psicografiaId: psicografia.id,
           coleccionesDisponibles: _coleccionesDisponibles,
           coleccionesSeleccionadas: _coleccionesSeleccionadas,
