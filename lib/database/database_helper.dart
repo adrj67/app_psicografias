@@ -260,4 +260,33 @@ class DatabaseHelper {
     final result = await db.query('historial_lectura', columns: ['psicografia_id']);
     return result.map((row) => row['psicografia_id'] as int).toList();
   }
+
+  // ============================================================
+  // MÉTODOS PARA NOTAS
+  // ============================================================
+
+  // Obtener psicografías que tienen notas (no vacías)
+  Future<List<Map<String, dynamic>>> getPsicografiasConNotas() async {
+    final db = await database;
+    return await db.rawQuery('''
+      SELECT * FROM psicografias 
+      WHERE notas IS NOT NULL AND notas != ''
+      ORDER BY id ASC
+    ''');
+  }
+
+  // Buscar en las notas
+  Future<List<Map<String, dynamic>>> searchPsicografiasByNotas(
+    String query, {
+    int limit = AppConstants.totalPsicografias, // 1313,
+    int offset = 0,
+  }) async {
+    final db = await database;
+    return await db.rawQuery('''
+      SELECT * FROM psicografias 
+      WHERE notas LIKE '%$query%'
+      ORDER BY id ASC
+      LIMIT $limit OFFSET $offset
+    ''');
+  }
 }

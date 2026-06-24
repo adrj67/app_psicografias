@@ -5,77 +5,72 @@ import '../models/coleccion.dart';
 import '../utils/constants.dart';
 import 'detalle_screen.dart';
 
-class NoLeidasScreen extends StatefulWidget {
-  const NoLeidasScreen({super.key});
+class NotasScreen extends StatefulWidget {
+  const NotasScreen({super.key});
 
   @override
-  State<NoLeidasScreen> createState() => _NoLeidasScreenState();
+  State<NotasScreen> createState() => _NotasScreenState();
 }
 
-class _NoLeidasScreenState extends State<NoLeidasScreen> {
+class _NotasScreenState extends State<NotasScreen> {
   final DatabaseHelper _dbHelper = DatabaseHelper();
   List<Psicografia> _psicografias = [];
   bool _isLoading = true;
   String? _errorMessage;
-  bool _ordenAscendente = true; // true = ID ascendente (1,2,3...)
-  int _totalNoLeidas = 0;
+  String _searchQuery = '';
+  int _totalNotas = 0;
 
   // Cache de colecciones por psicografía
   Map<int, List<Coleccion>> _coleccionesCache = {};
 
+  final TextEditingController _searchController = TextEditingController();
+
   @override
   void initState() {
     super.initState();
-    _cargarNoLeidas();
+    _cargarNotas();
   }
 
-  Future<void> _cargarNoLeidas() async {
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _cargarNotas() async {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
 
     try {
-      // Obtener IDs de psicografías leídas
-      final leidas = await _dbHelper.getIdsLeidas();
-      //print('📊 IDs leídos: ${leidas.length}');
-      
-      // Obtener todas las psicografías
-      final todas = await _dbHelper.getPsicografias(
-        limit: AppConstants.totalPsicografias, // 1313, 
-        offset: 0,
-      );
-      
-      // Filtrar las NO leídas
-      final noLeidas = todas
-          .where((item) => !leidas.contains(item['id']))
-          .map((e) => Psicografia.fromMap(e))
-          .toList();
-      
-      // Ordenar
-      if (_ordenAscendente) {
-        noLeidas.sort((a, b) => a.id.compareTo(b.id));
+      List<Map<String, dynamic>> data;
+
+      if (_searchQuery.isNotEmpty) {
+        data = await _dbHelper.searchPsicografiasByNotas(_searchQuery);
       } else {
-        noLeidas.sort((a, b) => b.id.compareTo(a.id));
+        data = await _dbHelper.getPsicografiasConNotas();
       }
-      
+
+      final psicos = data.map((e) => Psicografia.fromMap(e)).toList();
+
       // Cargar colecciones para cada psicografía
       final Map<int, List<Coleccion>> cache = {};
-      for (var p in noLeidas) {
+      for (var p in psicos) {
         final colecciones = await _dbHelper.getColeccionesByPsicografiaId(p.id);
         cache[p.id] = colecciones;
       }
-      
+
       setState(() {
-        _psicografias = noLeidas;
+        _psicografias = psicos;
         _coleccionesCache = cache;
-        _totalNoLeidas = noLeidas.length;
+        _totalNotas = psicos.length;
         _isLoading = false;
       });
-      
+
     } catch (e) {
       setState(() {
-        _errorMessage = 'Error al cargar psicografías no leídas: $e';
+        _errorMessage = 'Error al cargar notas: $e';
         _isLoading = false;
       });
     }
@@ -87,46 +82,57 @@ class _NoLeidasScreenState extends State<NoLeidasScreen> {
     return '${mensaje.substring(0, AppConstants.mensajeResumenLength)}...';
   }
 
+  String _getNotaPreview(String nota) {
+    if (nota.isEmpty) return '';
+    if (nota.length <= 50) return nota;
+    return '${nota.substring(0, 50)}...';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text('No Leídas'),
+        title: const Text('Psicografías con Notas'),
         backgroundColor: Theme.of(context).primaryColor,
         foregroundColor: Colors.white,
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(40),
+          preferredSize: const Size.fromHeight(60),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-            child: Row(
-              children: [
-                Text(
-                  '$_totalNoLeidas psicografías pendientes',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                  ),
+            padding: const EdgeInsets.all(8.0),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Buscar en notas...',
+                prefixIcon: Icon(Icons.search, color: Theme.of(context).hintColor),
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          setState(() {
+                            _searchController.clear();
+                            _searchQuery = '';
+                            _isLoading = true;
+                          });
+                          _cargarNotas();
+                        },
+                      )
+                    : null,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide.none,
                 ),
-                const Spacer(),
-                // Botón para invertir orden
-                IconButton(
-                  icon: Icon(
-                    _ordenAscendente ? Icons.arrow_upward : Icons.arrow_downward,
-                    size: 20,
-                  ),
-                  tooltip: _ordenAscendente
-                      ? 'ID ascendente (menor a mayor)'
-                      : 'ID descendente (mayor a menor)',
-                  onPressed: () {
-                    setState(() {
-                      _ordenAscendente = !_ordenAscendente;
-                      _isLoading = true;
-                    });
-                    _cargarNoLeidas();
-                  },
-                ),
-              ],
+                filled: true,
+                fillColor: Theme.of(context).cardTheme.color,
+              ),
+              style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color),
+              onChanged: (value) {
+                setState(() {
+                  _searchQuery = value;
+                  _isLoading = true;
+                });
+                _cargarNotas();
+              },
             ),
           ),
         ),
@@ -150,7 +156,7 @@ class _NoLeidasScreenState extends State<NoLeidasScreen> {
             Text(_errorMessage!),
             const SizedBox(height: 16),
             ElevatedButton(
-              onPressed: _cargarNoLeidas,
+              onPressed: _cargarNotas,
               child: const Text('Reintentar'),
             ),
           ],
@@ -163,28 +169,27 @@ class _NoLeidasScreenState extends State<NoLeidasScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.check_circle, size: 64, color: Colors.green.shade300),
+            Icon(Icons.note, size: 64, color: Colors.grey.shade400),
             const SizedBox(height: 16),
             Text(
-              '¡Todas las psicografías están leídas! 🎉',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.green.shade700,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'No hay psicografías pendientes',
+              _searchQuery.isNotEmpty
+                  ? 'No hay notas que coincidan con "$_searchQuery"'
+                  : 'No hay psicografías con notas',
               style: TextStyle(color: Colors.grey.shade600),
             ),
+            const SizedBox(height: 8),
+            if (_searchQuery.isEmpty)
+              Text(
+                'Agrega notas desde el detalle de una psicografía',
+                style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+              ),
           ],
         ),
       );
     }
 
     return RefreshIndicator(
-      onRefresh: _cargarNoLeidas,
+      onRefresh: _cargarNotas,
       child: ListView.builder(
         padding: const EdgeInsets.all(8.0),
         itemCount: _psicografias.length,
@@ -222,21 +227,23 @@ class _NoLeidasScreenState extends State<NoLeidasScreen> {
               subtitle: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Indicador "No leída"
+                  // Previsualización de la nota
                   Row(
                     children: [
                       Icon(
-                        Icons.radio_button_unchecked,
+                        Icons.note,
                         size: 14,
-                        color: Colors.grey.shade500,
+                        color: Colors.amber.shade700,
                       ),
                       const SizedBox(width: 4),
-                      Text(
-                        'No leída',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey.shade500,
-                          fontStyle: FontStyle.italic,
+                      Expanded(
+                        child: Text(
+                          _getNotaPreview(p.notas ?? ''),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.amber.shade700,
+                            fontStyle: FontStyle.italic,
+                          ),
                         ),
                       ),
                     ],
@@ -286,8 +293,7 @@ class _NoLeidasScreenState extends State<NoLeidasScreen> {
                     ),
                   ),
                 ).then((_) {
-                  // Recargar al volver del detalle
-                  _cargarNoLeidas();
+                  _cargarNotas();
                 });
               },
             ),

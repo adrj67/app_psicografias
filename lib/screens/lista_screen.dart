@@ -1,3 +1,4 @@
+import 'package:app_psicografias/screens/notas_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../database/database_helper.dart';
@@ -163,6 +164,20 @@ class _ListaScreenState extends State<ListaScreen> {
         backgroundColor: Theme.of(context).primaryColor,
         foregroundColor: Colors.white,
         actions: [
+          // Botón de Notas
+          IconButton(
+            icon: const Icon(Icons.note),
+            tooltip: 'Psicografías con Notas',
+            onPressed: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const NotasScreen(),
+                ),
+              );
+              _refresh();
+            },
+          ),
           // Botón No Leídas
           IconButton(
             icon: const Icon(Icons.radio_button_unchecked),

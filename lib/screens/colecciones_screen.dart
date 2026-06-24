@@ -84,7 +84,7 @@ class _ColeccionesScreenState extends State<ColeccionesScreen> {
               }
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppConstants.primaryLight,
+              backgroundColor: AppConstants.lightPrimary,
             ),
             child: const Text('Crear'),
           ),
@@ -161,7 +161,7 @@ class _ColeccionesScreenState extends State<ColeccionesScreen> {
               }
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppConstants.primaryLight,
+              backgroundColor: AppConstants.lightPrimary,
             ),
             child: const Text('Guardar'),
           ),

@@ -273,15 +273,15 @@ class _HistorialLecturasScreenState extends State<HistorialLecturasScreen> {
                             decoration: BoxDecoration(
                               color:
                                   (isDark
-                                          ? AppConstants.amberDark
-                                          : AppConstants.amberLight)
+                                          ? AppConstants.darkSecondary
+                                          : AppConstants.lightSecondary)
                                       .withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(10),
                               border: Border.all(
                                 color:
                                     (isDark
-                                            ? AppConstants.amberDark
-                                            : AppConstants.amberLight)
+                                            ? AppConstants.darkSecondary
+                                            : AppConstants.lightSecondary)
                                         .withValues(alpha: 0.4),
                                 width: 0.5,
                               ),
@@ -292,8 +292,8 @@ class _HistorialLecturasScreenState extends State<HistorialLecturasScreen> {
                                 fontSize: 10,
                                 fontWeight: FontWeight.w500,
                                 color: isDark
-                                    ? AppConstants.amberDark
-                                    : AppConstants.amberLight,
+                                    ? AppConstants.darkSecondary
+                                    : AppConstants.lightSecondary,
                               ),
                             ),
                           );

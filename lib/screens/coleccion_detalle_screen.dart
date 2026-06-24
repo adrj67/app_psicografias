@@ -40,7 +40,7 @@ class _ColeccionDetalleScreenState extends State<ColeccionDetalleScreen> {
       // Obtener todas las psicografías de esta colección
       final data = await _dbHelper.getPsicografiasByColeccion(
         widget.coleccion.id!,
-        limit: 999, // Sin límite para mostrar todas
+        limit: AppConstants.totalPsicografias, // Sin límite para mostrar todas 1313
         offset: 0,
       );
 
