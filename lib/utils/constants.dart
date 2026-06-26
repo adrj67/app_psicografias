@@ -25,10 +25,10 @@ class AppConstants {
   // ============================================================
   
   // --- TEMA CLARO ---
-  static const Color lightBackground = Color.fromARGB(255, 167, 209, 243);     // Blanco
+  static const Color lightBackground = Color.fromARGB(255, 183, 216, 243);     // Blanco
   static const Color lightSurface = Color(0xFFF5F9FE);         // #c5def2 (azul muy claro)
   static const Color lightPrimary = Color(0xFF2196F3);         // Azul principal
-  static const Color lightSecondary = Color(0xFFFF9800);       // Naranja
+  static const Color lightSecondary = Color.fromARGB(255, 253, 152, 1);       // Naranja
   static const Color lightText = Color(0xFF212121);            // Gris oscuro
   static const Color lightSuccess = Color(0xFF28f02c);         // Verde
 

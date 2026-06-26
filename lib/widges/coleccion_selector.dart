@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../database/database_helper.dart';
 import '../models/coleccion.dart';
-import '../utils/constants.dart';
+//import '../utils/constants.dart';
 
 class ColeccionSelector extends StatefulWidget {
   final int psicografiaId;
@@ -34,6 +34,7 @@ class _ColeccionSelectorState extends State<ColeccionSelector> {
     _seleccionadas = List.from(widget.coleccionesSeleccionadas);
   }
 
+  @override
   void didUpdateWidget(ColeccionSelector oldWidget) {
     super.didUpdateWidget(oldWidget);
     // ✅ Actualizar cuando cambian las colecciones seleccionadas desde el padre

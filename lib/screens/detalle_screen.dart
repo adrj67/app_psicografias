@@ -1,5 +1,5 @@
 import 'package:app_psicografias/widges/coleccion_selector.dart';
-import 'package:app_psicografias/widges/error_widget.dart';
+//import 'package:app_psicografias/widges/error_widget.dart';
 import 'package:app_psicografias/widges/imagen_blob_widget.dart';
 import 'package:app_psicografias/widges/loading_widget.dart';
 import 'package:flutter/material.dart';
@@ -9,14 +9,10 @@ import '../models/psicografia.dart';
 import '../models/coleccion.dart';
 import '../utils/constants.dart';
 
-
 class DetalleScreen extends StatefulWidget {
   final int psicografiaId;
-  
-  const DetalleScreen({
-    super.key,
-    required this.psicografiaId,
-  });
+
+  const DetalleScreen({super.key, required this.psicografiaId});
 
   @override
   State<DetalleScreen> createState() => _DetalleScreenState();
@@ -27,16 +23,17 @@ class _DetalleScreenState extends State<DetalleScreen> {
   Psicografia? _psicografia;
   bool _isLoading = true;
   String? _errorMessage;
-  
+
   TextEditingController? _notasController;
   bool _isEditingNotas = false;
   bool _isSaving = false;
-  
+
   // Variables para colecciones
   List<Coleccion> _coleccionesDisponibles = [];
   List<Coleccion> _coleccionesSeleccionadas = [];
 
   bool _fueLeida = false;
+  bool _estaLeida = false;
 
   @override
   void initState() {
@@ -51,6 +48,46 @@ class _DetalleScreenState extends State<DetalleScreen> {
   }
 
   Future<void> _loadDetalle() async {
+    try {
+      final data = await _dbHelper.getPsicografiaById(widget.psicografiaId);
+      if (data != null) {
+        final psicografia = Psicografia.fromMap(data);
+
+        // ✅ Guardar estado de lectura
+        final yaLeida = await _dbHelper.isLeida(widget.psicografiaId);
+        _estaLeida = yaLeida;
+
+        setState(() {
+          _psicografia = psicografia;
+          _notasController = TextEditingController(
+            text: psicografia.notas ?? '',
+          );
+          _isLoading = false;
+        });
+
+        // Marcar como leída (solo la primera vez)
+        if (!yaLeida) {
+          await _dbHelper.marcarComoLeida(widget.psicografiaId);
+          _estaLeida = true;
+          _fueLeida = true;
+        }
+
+        await _loadColecciones();
+      } else {
+        setState(() {
+          _errorMessage = 'No se encontró la psicografía';
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = AppConstants.errorLoadingMessage;
+        _isLoading = false;
+      });
+    }
+  }
+
+  /*Future<void> _loadDetalle() async {
     try {
       final data = await _dbHelper.getPsicografiaById(widget.psicografiaId);
       if (data != null) {
@@ -90,6 +127,28 @@ class _DetalleScreenState extends State<DetalleScreen> {
         _isLoading = false;
       });
     }
+  }*/
+
+  Future<void> _toggleLectura() async {
+    if (_psicografia == null) return;
+
+    final nuevaLeida = !_estaLeida;
+
+    if (nuevaLeida) {
+      await _dbHelper.marcarComoLeida(_psicografia!.id);
+    } else {
+      await _dbHelper.eliminarLectura(_psicografia!.id);
+    }
+
+    setState(() {
+      _estaLeida = nuevaLeida;
+      _fueLeida = true; // Para notificar cambios al volver
+    });
+
+    _mostrarSnackBar(
+      nuevaLeida ? '✓ Marcada como leída' : 'Marcada como no leída',
+      nuevaLeida ? Colors.green : Colors.grey,
+    );
   }
 
   Future<void> _loadColecciones() async {
@@ -97,26 +156,32 @@ class _DetalleScreenState extends State<DetalleScreen> {
       debugPrint('⚠️ _psicografia es null, no se pueden cargar colecciones');
       return;
     }
-    
+
     try {
-      debugPrint('📚 Cargando colecciones para psicografia ID: ${_psicografia!.id}');
-      
+      debugPrint(
+        '📚 Cargando colecciones para psicografia ID: ${_psicografia!.id}',
+      );
+
       final disponibles = await _dbHelper.getColecciones();
       debugPrint('📚 Colecciones disponibles: ${disponibles.length}');
-      
-      final seleccionadas = await _dbHelper.getColeccionesByPsicografiaId(_psicografia!.id);
+
+      final seleccionadas = await _dbHelper.getColeccionesByPsicografiaId(
+        _psicografia!.id,
+      );
       debugPrint('📚 Colecciones seleccionadas: ${seleccionadas.length}');
 
       for (var col in seleccionadas) {
         debugPrint('   - ${col.nombre}');
       }
-      
+
       if (mounted) {
         setState(() {
           _coleccionesDisponibles = disponibles;
           _coleccionesSeleccionadas = seleccionadas;
         });
-        debugPrint('✅ State actualizado con ${_coleccionesSeleccionadas.length} colecciones');
+        debugPrint(
+          '✅ State actualizado con ${_coleccionesSeleccionadas.length} colecciones',
+        );
       }
     } catch (e) {
       debugPrint('❌ Error cargando colecciones: $e');
@@ -128,17 +193,17 @@ class _DetalleScreenState extends State<DetalleScreen> {
       _mostrarSnackBar('Error: No hay datos para guardar', Colors.red);
       return;
     }
-    
+
     setState(() {
       _isSaving = true;
     });
-    
+
     try {
       final resultado = await _dbHelper.updateNotas(
-        _psicografia!.id, 
-        _notasController!.text
+        _psicografia!.id,
+        _notasController!.text,
       );
-      
+
       if (resultado > 0) {
         setState(() {
           _psicografia = Psicografia(
@@ -153,7 +218,7 @@ class _DetalleScreenState extends State<DetalleScreen> {
           _isEditingNotas = false;
           _isSaving = false;
         });
-        
+
         _mostrarSnackBar('✓ Notas guardadas correctamente', Colors.green);
       } else {
         throw Exception('No se pudo actualizar la base de datos');
@@ -168,7 +233,10 @@ class _DetalleScreenState extends State<DetalleScreen> {
 
   void _copiarAlPortapapeles(String texto, String titulo) {
     Clipboard.setData(ClipboardData(text: texto));
-    _mostrarSnackBar('✓ $titulo copiado al portapapeles', Theme.of(context).primaryColor);
+    _mostrarSnackBar(
+      '✓ $titulo copiado al portapapeles',
+      Theme.of(context).primaryColor,
+    );
   }
 
   void _mostrarSnackBar(String mensaje, Color color) {
@@ -185,12 +253,12 @@ class _DetalleScreenState extends State<DetalleScreen> {
   @override
   Widget build(BuildContext context) {
     return PopScope(
-    canPop: false,  // Prevenir el pop automático
-    onPopInvokedWithResult: (didPop, result) async {
-      if (didPop) return;
-      // Retornar true si fue la primera vez que se leyó
-      Navigator.pop(context, _fueLeida);
-    },
+      canPop: false, // Prevenir el pop automático
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        // Retornar true si fue la primera vez que se leyó
+        Navigator.pop(context, _fueLeida);
+      },
       child: _buildScaffold(),
     );
   }
@@ -206,7 +274,7 @@ class _DetalleScreenState extends State<DetalleScreen> {
         body: const LoadingWidget(),
       );
     }
-    
+
     if (_errorMessage != null) {
       return Scaffold(
         appBar: AppBar(
@@ -217,7 +285,7 @@ class _DetalleScreenState extends State<DetalleScreen> {
         body: Center(child: Text(_errorMessage!)),
       );
     }
-    
+
     if (_psicografia == null) {
       return Scaffold(
         appBar: AppBar(
@@ -228,15 +296,159 @@ class _DetalleScreenState extends State<DetalleScreen> {
         body: const Center(child: Text('No se encontró la psicografía')),
       );
     }
-    
+
     final psicografia = _psicografia!;
-    
+
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('Detalle'),
         backgroundColor: Theme.of(context).primaryColor,
         foregroundColor: Colors.white,
+        actions: [
+        // Botón para toggle de lectura (estilo Chip)
+        GestureDetector(
+          onTap: _toggleLectura,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: _estaLeida 
+                  ? (Theme.of(context).brightness == Brightness.light 
+                      ? AppConstants.lightSurface
+                      : AppConstants.darkSurface)
+                  : (Theme.of(context).brightness == Brightness.light 
+                      ? Colors.grey.shade600 
+                      : Colors.grey.shade500),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: _estaLeida 
+                    ? (Theme.of(context).brightness == Brightness.light 
+                        ? Colors.green.shade300 
+                        : Colors.green.shade700)
+                    : (Theme.of(context).brightness == Brightness.light 
+                        ? Colors.grey.shade400 
+                        : Colors.grey.shade700),
+                width: 1,
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  _estaLeida ? Icons.check_circle : Icons.radio_button_unchecked,
+                  color: _estaLeida 
+                      ? (Theme.of(context).brightness == Brightness.light 
+                          ? Colors.green.shade700 
+                          : Colors.green.shade300)
+                      : (Theme.of(context).brightness == Brightness.light 
+                          ? Colors.grey.shade200 
+                          : Colors.grey.shade400),
+                  size: 18,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  _estaLeida ? 'Leída' : 'No leída',
+                  style: TextStyle(
+                    color: _estaLeida 
+                        ? (Theme.of(context).brightness == Brightness.light 
+                            ? Colors.green.shade700 
+                            : Colors.green.shade300)
+                        : (Theme.of(context).brightness == Brightness.light 
+                            ? Colors.white 
+                            : Colors.white),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Icon(
+                  _estaLeida ? Icons.undo : Icons.check,
+                  color: _estaLeida 
+                      ? (Theme.of(context).brightness == Brightness.light 
+                          ? Colors.green.shade700 
+                          : Colors.green.shade300)
+                      : (Theme.of(context).brightness == Brightness.light 
+                          ? Colors.white 
+                          : Colors.white),
+                  size: 14,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+
+        /* 2 actions: [
+        // Botón para toggle de lectura (con texto)
+        TextButton.icon(
+          onPressed: _toggleLectura,
+          icon: Icon(
+            _estaLeida ? Icons.check_circle : Icons.radio_button_unchecked,
+            color: _estaLeida 
+                ? (Theme.of(context).brightness == Brightness.light 
+                    ? AppConstants.lightSuccess// Colors.green.shade700 
+                    : AppConstants.darkSuccess)// Colors.green.shade300)
+                : (Theme.of(context).brightness == Brightness.light 
+                    ? Colors.grey.shade600 
+                    : Colors.grey.shade500),
+            size: 20,
+          ),
+          label: Text(
+            _estaLeida ? 'Leída' : 'No leída',
+            style: TextStyle(
+              color: _estaLeida 
+                  ? (Theme.of(context).brightness == Brightness.light 
+                      ? AppConstants.lightSuccess // Colors.green.shade700 
+                      : AppConstants.darkSuccess) // Colors.green.shade300)
+                  : (Theme.of(context).brightness == Brightness.light 
+                      ? Colors.grey.shade600 
+                      : Colors.grey.shade500),
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          style: TextButton.styleFrom(
+            foregroundColor: Colors.white,
+            backgroundColor: _estaLeida
+                  ? (Theme.of(context).brightness == Brightness.light 
+                      ? AppConstants.lightSurface
+                      : AppConstants.darkSurface)
+                  : (Theme.of(context).brightness == Brightness.light 
+                      ? Colors.grey.shade600 
+                      : Colors.grey.shade500),
+                // ? (Theme.of(context).brightness == Brightness.light 
+                //     ? Colors.green.shade50 
+                //     : Colors.green.withValues(alpha: 0.2))
+                // : (Theme.of(context).brightness == Brightness.light 
+                //     ? Colors.grey.shade200 
+                //     : Colors.grey.withValues(alpha: 0.2)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+          ),
+        ),
+      ],*/
+
+        /* 1 actions: [
+        // Botón para toggle de lectura
+        IconButton(
+          icon: Icon(
+            _estaLeida ? Icons.check_circle : Icons.radio_button_unchecked,
+            color: _estaLeida 
+                ? (Theme.of(context).brightness == Brightness.light 
+                    ? AppConstants.lightText  // Verde más oscuro en modo claro
+                    : AppConstants.darkBackground) // Verde más claro en modo oscuro
+                : (Theme.of(context).brightness == Brightness.light 
+                    ? Colors.grey.shade600 
+                    : Colors.grey.shade500),
+            size: 28,
+          ),
+          tooltip: _estaLeida 
+              ? 'Marcar como no leída' 
+              : 'Marcar como leída',
+          onPressed: _toggleLectura,
+        ),
+      ],*/
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -287,12 +499,19 @@ class _DetalleScreenState extends State<DetalleScreen> {
             ),
           ),
           const SizedBox(width: 12),
-          if (psicografia.urlReferencia != null && psicografia.urlReferencia!.isNotEmpty)
+          if (psicografia.urlReferencia != null &&
+              psicografia.urlReferencia!.isNotEmpty)
             Expanded(
               child: GestureDetector(
-                onTap: () => _copiarAlPortapapeles(psicografia.urlReferencia!, 'Referencia'),
+                onTap: () => _copiarAlPortapapeles(
+                  psicografia.urlReferencia!,
+                  'Referencia',
+                ),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.blue.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(20),
@@ -328,8 +547,9 @@ class _DetalleScreenState extends State<DetalleScreen> {
   // COLUMNA IZQUIERDA: IMAGEN
   // ============================================================
   Widget _buildImagenColumn(Psicografia psicografia) {
-    final imagenBytes = psicografia.imagenSecundaria ?? psicografia.imagenPrincipal;
-    
+    final imagenBytes =
+        psicografia.imagenSecundaria ?? psicografia.imagenPrincipal;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -402,10 +622,10 @@ class _DetalleScreenState extends State<DetalleScreen> {
         // Mensaje
         _buildMensajeWidget(psicografia),
         const SizedBox(height: 16),
-        
+
         // Selector de Colecciones
         ColeccionSelector(
-          key: ValueKey(_coleccionesSeleccionadas.length), 
+          key: ValueKey(_coleccionesSeleccionadas.length),
           psicografiaId: psicografia.id,
           coleccionesDisponibles: _coleccionesDisponibles,
           coleccionesSeleccionadas: _coleccionesSeleccionadas,
@@ -416,7 +636,7 @@ class _DetalleScreenState extends State<DetalleScreen> {
           },
         ),
         const SizedBox(height: 16),
-        
+
         // Notas
         _buildNotasWidget(psicografia),
       ],
@@ -437,7 +657,9 @@ class _DetalleScreenState extends State<DetalleScreen> {
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const Spacer(),
-            _buildCopiarBoton(() => _copiarAlPortapapeles(psicografia.mensaje, 'Mensaje')),
+            _buildCopiarBoton(
+              () => _copiarAlPortapapeles(psicografia.mensaje, 'Mensaje'),
+            ),
           ],
         ),
         const SizedBox(height: 8),
@@ -471,16 +693,22 @@ class _DetalleScreenState extends State<DetalleScreen> {
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const Spacer(),
-            if (!_isEditingNotas && psicografia.notas != null && psicografia.notas!.isNotEmpty)
-              _buildCopiarBoton(() => _copiarAlPortapapeles(psicografia.notas!, 'Notas')),
-            if (!_isEditingNotas)
-              _buildEditarBoton(),
-            if (_isEditingNotas)
+            if (!_isEditingNotas &&
+                psicografia.notas != null &&
+                psicografia.notas!.isNotEmpty)
+              _buildCopiarBoton(
+                () => _copiarAlPortapapeles(psicografia.notas!, 'Notas'),
+              ),
+            if (!_isEditingNotas) _buildEditarBoton(),
+            if (_isEditingNotas) ...[
+              _buildCancelarBoton(),
+              const SizedBox(width: 4),
               _buildGuardarBoton(),
+            ],
           ],
         ),
         const SizedBox(height: 8),
-        
+
         if (_isEditingNotas && _notasController != null)
           Column(
             children: [
@@ -531,25 +759,61 @@ class _DetalleScreenState extends State<DetalleScreen> {
               ),
             ),
             child: SelectableText(
-              psicografia.notas == null || psicografia.notas!.isEmpty 
-                  ? 'Sin notas - Toca "Editar" para agregar notas' 
+              psicografia.notas == null || psicografia.notas!.isEmpty
+                  ? 'Sin notas - Toca "Editar" para agregar notas'
                   : psicografia.notas!,
               style: TextStyle(
                 fontSize: 14,
-                fontStyle: psicografia.notas == null || psicografia.notas!.isEmpty 
-                    ? FontStyle.italic 
+                fontStyle:
+                    psicografia.notas == null || psicografia.notas!.isEmpty
+                    ? FontStyle.italic
                     : FontStyle.normal,
-                color: psicografia.notas == null || psicografia.notas!.isEmpty 
+                color: psicografia.notas == null || psicografia.notas!.isEmpty
                     ? Theme.of(context).brightness == Brightness.light
-                        ? Colors.grey
-                        : Colors.grey.shade500
+                          ? Colors.grey
+                          : Colors.grey.shade500
                     : Theme.of(context).brightness == Brightness.light
-                        ? Colors.black87
-                        : Colors.white,
+                    ? Colors.black87
+                    : Colors.white,
               ),
             ),
           ),
       ],
+    );
+  }
+
+  // Boton de Cancelar Notas
+  Widget _buildCancelarBoton() {
+    return GestureDetector(
+      onTap: () {
+        // Restaurar el texto original
+        _notasController?.text = _psicografia?.notas ?? '';
+        setState(() {
+          _isEditingNotas = false;
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.grey.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: Colors.grey.withValues(alpha: 0.3),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.close, size: 14, color: Colors.grey.shade700),
+            const SizedBox(width: 4),
+            Text(
+              'Cancelar',
+              style: TextStyle(fontSize: 11, color: Colors.grey.shade700),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -600,7 +864,10 @@ class _DetalleScreenState extends State<DetalleScreen> {
         decoration: BoxDecoration(
           color: Colors.orange.withValues(alpha: 0.15),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.orange.withValues(alpha: 0.3), width: 1),
+          border: Border.all(
+            color: Colors.orange.withValues(alpha: 0.3),
+            width: 1,
+          ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -625,7 +892,10 @@ class _DetalleScreenState extends State<DetalleScreen> {
         decoration: BoxDecoration(
           color: Colors.green.withValues(alpha: 0.15),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.green.withValues(alpha: 0.3), width: 1),
+          border: Border.all(
+            color: Colors.green.withValues(alpha: 0.3),
+            width: 1,
+          ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,

@@ -220,25 +220,6 @@ class _ListaScreenState extends State<ListaScreen> {
               _refresh();
             },
           ),
-          /*// Botón limpiar búsqueda
-          if (_searchQuery.isNotEmpty)
-            IconButton(
-              icon: const Icon(Icons.clear),
-              tooltip: 'Borrar Búsqueda',
-              onPressed: () {
-                setState(() {
-                  _searchQuery = '';
-                  _busquedaActiva = false;
-                  _currentPage = 0;
-                  _hasMore = true;
-                  _psicografias = [];
-                  _lecturasCache = {};
-                  _isLoading = true;
-                });
-                _cargarDatosIniciales();
-              },
-            ),
-            */
           // Botón tema
           IconButton(
             icon: Icon(

@@ -261,6 +261,17 @@ class DatabaseHelper {
     return result.map((row) => row['psicografia_id'] as int).toList();
   }
 
+  // Eliminar una psicografía del historial de lecturas (marcar como no leída)
+  Future<void> eliminarLectura(int psicografiaId) async {
+    final db = await database;
+    await db.delete(
+      'historial_lectura',
+      where: 'psicografia_id = ?',
+      whereArgs: [psicografiaId],
+    );
+    debugPrint('🗑️ Lectura eliminada para psicografia ID: $psicografiaId');
+  }
+
   // ============================================================
   // MÉTODOS PARA NOTAS
   // ============================================================
