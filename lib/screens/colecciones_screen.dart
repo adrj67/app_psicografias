@@ -171,8 +171,6 @@ class _ColeccionesScreenState extends State<ColeccionesScreen> {
 
     if (result == true && nombreController.text.trim().isNotEmpty) {
       try {
-        // Nota: Necesitas agregar un método updateColeccion en DatabaseHelper
-        // Por ahora, recreamos la colección (borrar y crear)
         await _dbHelper.deleteColeccion(coleccion.id!);
         await _dbHelper.createColeccion(
           nombreController.text.trim(),
@@ -356,7 +354,7 @@ class _ColeccionesScreenState extends State<ColeccionesScreen> {
               ],
             ),
             onTap: () {
-            // ✅ Abrir detalle de la colección
+            // Abrir detalle de la colección
             Navigator.push(
               context,
               MaterialPageRoute(

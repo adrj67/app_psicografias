@@ -21,7 +21,7 @@ class AppConstants {
   static const String detalleTitle = 'Detalle';
 
   // ============================================================
-  // NUEVA PALETA DE COLORES
+  // PALETA DE COLORES
   // ============================================================
   
   // --- TEMA CLARO ---

@@ -10,7 +10,6 @@ class AppThemes {
       primary: AppConstants.lightPrimary,
       secondary: AppConstants.lightSecondary,
       surface: AppConstants.lightSurface,
-      //background: AppConstants.lightBackground,
     ),
     cardTheme: CardThemeData(
       elevation: 2,
@@ -66,7 +65,6 @@ class AppThemes {
       primary: AppConstants.darkPrimary,
       secondary: AppConstants.darkSecondary,
       surface: AppConstants.darkSurface,
-      //background: AppConstants.darkBackground,
     ),
     cardTheme: CardThemeData(
       elevation: 2,

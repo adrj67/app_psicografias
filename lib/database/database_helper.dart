@@ -47,12 +47,16 @@ class DatabaseHelper {
 
   Future<Database> _initDatabase() async {
     try {
+      // Obtener la carpeta de Documentos del usuario
       Directory documentsDirectory = await getApplicationDocumentsDirectory();
+      // Crear la ruta completa: C:\Users\name\Documents\psicografias.db
       String path = join(documentsDirectory.path, AppConstants.databaseName);
       
+      // Verificar si ya existe
       bool exists = await File(path).exists();
       debugPrint('📀 ¿Existe BD en Documentos? $exists');
       
+      // Si no existe, copiar desde assets
       if (!exists) {
         debugPrint('📀 Copiando BD desde assets a Documentos...');
         ByteData data = await rootBundle.load(AppConstants.databaseAssetPath);
@@ -62,7 +66,7 @@ class DatabaseHelper {
       } else {
         debugPrint('✅ Usando BD existente en Documentos');
       }
-      
+      // Abrir y usar la base de datos en Documentos
       final db = await openDatabase(path);
       
       await _createColeccionesTables(db);

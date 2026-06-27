@@ -1,72 +1,86 @@
 import sqlite3
 import os
 
-# Para ejecutar
+# Para ejecutar:
 # python resetear_lecturas.py
 
-# Ruta de la base de datos (relativa al script)
-# DB_PATH = 'assets/database/psicografias.db' # base de datos original, no se modifica
-
-# Ruta de la base de datos (donde hace una copia de la bd que se usa despues)
+# Ruta de la base de datos (copia en Documentos que usa la app)
 DB_PATH = 'C:/Users/adrj/OneDrive/Documentos/psicografias.db'
 
-
-
-def resetear_lecturas():
-    """Elimina todos los registros del historial de lecturas"""
+def resetear_datos():
+    """Elimina historial de lecturas, colecciones, relaciones y notas"""
     
-    # Verificar que el archivo existe
     if not os.path.exists(DB_PATH):
         print(f'❌ Error: No se encuentra la base de datos en {DB_PATH}')
-        print('   Asegúrate de ejecutar el script desde la raíz del proyecto.')
         return
     
     try:
-        # Conectar a la base de datos
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
         
-        # Contar registros antes de borrar
+        # Contar antes
         cursor.execute('SELECT COUNT(*) FROM historial_lectura')
-        antes = cursor.fetchone()[0]
-        print(f'📊 Registros en historial antes de resetear: {antes}')
+        antes_lecturas = cursor.fetchone()[0]
         
-        # Confirmar antes de borrar
-        if antes == 0:
-            print('ℹ️  El historial ya está vacío. No se requiere acción.')
+        cursor.execute('SELECT COUNT(*) FROM colecciones')
+        antes_colecciones = cursor.fetchone()[0]
+        
+        cursor.execute('SELECT COUNT(*) FROM psicografia_coleccion')
+        antes_relaciones = cursor.fetchone()[0]
+        
+        print(f'📊 Estado actual:')
+        print(f'   Lecturas: {antes_lecturas}')
+        print(f'   Colecciones: {antes_colecciones}')
+        print(f'   Relaciones: {antes_relaciones}')
+        
+        if antes_lecturas == 0 and antes_colecciones == 0 and antes_relaciones == 0:
+            print('ℹ️  Todo ya está vacío.')
             conn.close()
             return
         
-        print('⚠️  ¿Estás seguro de eliminar TODOS los registros de lecturas?')
+        print('\n⚠️  ¿Eliminar TODOS los datos?')
+        print('   - Historial de lecturas')
+        print('   - Colecciones y relaciones')
+        print('   - Notas')
         respuesta = input('   Escribe "si" para confirmar: ')
         
         if respuesta.lower() != 'si':
-            print('❌ Operación cancelada.')
+            print('❌ Cancelado.')
             conn.close()
             return
         
-        # Borrar historial
+        print('\n🗑️  Eliminando...')
         cursor.execute('DELETE FROM historial_lectura')
+        print('   ✅ Lecturas')
+        cursor.execute('DELETE FROM psicografia_coleccion')
+        print('   ✅ Relaciones')
+        cursor.execute('DELETE FROM colecciones')
+        print('   ✅ Colecciones')
+        cursor.execute('UPDATE psicografias SET notas = NULL')
+        print('   ✅ Notas')
         conn.commit()
         
-        # Verificar resultado
+        # Verificar después
         cursor.execute('SELECT COUNT(*) FROM historial_lectura')
-        despues = cursor.fetchone()[0]
+        despues_lecturas = cursor.fetchone()[0]
+        cursor.execute('SELECT COUNT(*) FROM colecciones')
+        despues_colecciones = cursor.fetchone()[0]
+        cursor.execute('SELECT COUNT(*) FROM psicografia_coleccion')
+        despues_relaciones = cursor.fetchone()[0]
         
-        print(f'✅ Historial reseteado correctamente.')
-        print(f'   Registros eliminados: {antes}')
-        print(f'   Registros restantes: {despues}')
+        print('\n' + '='*50)
+        print('✅ RESETEO COMPLETADO')
+        print('='*50)
+        print(f'   Lecturas: {antes_lecturas} → {despues_lecturas}')
+        print(f'   Colecciones: {antes_colecciones} → {despues_colecciones}')
+        print(f'   Relaciones: {antes_relaciones} → {despues_relaciones}')
         
         conn.close()
         
     except sqlite3.Error as e:
-        print(f'❌ Error en la base de datos: {e}')
+        print(f'❌ Error en BD: {e}')
     except Exception as e:
-        print(f'❌ Error inesperado: {e}')
+        print(f'❌ Error: {e}')
 
 if __name__ == '__main__':
-    resetear_lecturas()
-
-    
-# Para ejecutar
-# python resetear_lecturas.py
+    resetear_datos()

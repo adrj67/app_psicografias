@@ -1,5 +1,4 @@
 import 'package:app_psicografias/widges/coleccion_selector.dart';
-//import 'package:app_psicografias/widges/error_widget.dart';
 import 'package:app_psicografias/widges/imagen_blob_widget.dart';
 import 'package:app_psicografias/widges/loading_widget.dart';
 import 'package:flutter/material.dart';
@@ -53,7 +52,7 @@ class _DetalleScreenState extends State<DetalleScreen> {
       if (data != null) {
         final psicografia = Psicografia.fromMap(data);
 
-        // ✅ Guardar estado de lectura
+        // Guardar estado de lectura
         final yaLeida = await _dbHelper.isLeida(widget.psicografiaId);
         _estaLeida = yaLeida;
 
@@ -86,48 +85,6 @@ class _DetalleScreenState extends State<DetalleScreen> {
       });
     }
   }
-
-  /*Future<void> _loadDetalle() async {
-    try {
-      final data = await _dbHelper.getPsicografiaById(widget.psicografiaId);
-      if (data != null) {
-        final psicografia = Psicografia.fromMap(data);
-        
-        final yaLeida = await _dbHelper.isLeida(widget.psicografiaId);
-        
-        setState(() {
-          _psicografia = psicografia;
-          _notasController = TextEditingController(text: psicografia.notas ?? '');
-          _isLoading = false;
-        });
-        
-        if (!yaLeida) {
-          await _dbHelper.marcarComoLeida(widget.psicografiaId);
-          _fueLeida = true;
-        }
-        
-        // ✅ FORMA 1: Usar addPostFrameCallback (recomendado)
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          _loadColecciones();
-        });
-        
-        // ✅ FORMA 2: Usar Future.delayed (alternativa)
-        // await Future.delayed(const Duration(milliseconds: 100));
-        // await _loadColecciones();
-        
-      } else {
-        setState(() {
-          _errorMessage = 'No se encontró la psicografía';
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      setState(() {
-        _errorMessage = AppConstants.errorLoadingMessage;
-        _isLoading = false;
-      });
-    }
-  }*/
 
   Future<void> _toggleLectura() async {
     if (_psicografia == null) return;
@@ -377,78 +334,6 @@ class _DetalleScreenState extends State<DetalleScreen> {
           ),
         ),
       ],
-
-        /* 2 actions: [
-        // Botón para toggle de lectura (con texto)
-        TextButton.icon(
-          onPressed: _toggleLectura,
-          icon: Icon(
-            _estaLeida ? Icons.check_circle : Icons.radio_button_unchecked,
-            color: _estaLeida 
-                ? (Theme.of(context).brightness == Brightness.light 
-                    ? AppConstants.lightSuccess// Colors.green.shade700 
-                    : AppConstants.darkSuccess)// Colors.green.shade300)
-                : (Theme.of(context).brightness == Brightness.light 
-                    ? Colors.grey.shade600 
-                    : Colors.grey.shade500),
-            size: 20,
-          ),
-          label: Text(
-            _estaLeida ? 'Leída' : 'No leída',
-            style: TextStyle(
-              color: _estaLeida 
-                  ? (Theme.of(context).brightness == Brightness.light 
-                      ? AppConstants.lightSuccess // Colors.green.shade700 
-                      : AppConstants.darkSuccess) // Colors.green.shade300)
-                  : (Theme.of(context).brightness == Brightness.light 
-                      ? Colors.grey.shade600 
-                      : Colors.grey.shade500),
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          style: TextButton.styleFrom(
-            foregroundColor: Colors.white,
-            backgroundColor: _estaLeida
-                  ? (Theme.of(context).brightness == Brightness.light 
-                      ? AppConstants.lightSurface
-                      : AppConstants.darkSurface)
-                  : (Theme.of(context).brightness == Brightness.light 
-                      ? Colors.grey.shade600 
-                      : Colors.grey.shade500),
-                // ? (Theme.of(context).brightness == Brightness.light 
-                //     ? Colors.green.shade50 
-                //     : Colors.green.withValues(alpha: 0.2))
-                // : (Theme.of(context).brightness == Brightness.light 
-                //     ? Colors.grey.shade200 
-                //     : Colors.grey.withValues(alpha: 0.2)),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-          ),
-        ),
-      ],*/
-
-        /* 1 actions: [
-        // Botón para toggle de lectura
-        IconButton(
-          icon: Icon(
-            _estaLeida ? Icons.check_circle : Icons.radio_button_unchecked,
-            color: _estaLeida 
-                ? (Theme.of(context).brightness == Brightness.light 
-                    ? AppConstants.lightText  // Verde más oscuro en modo claro
-                    : AppConstants.darkBackground) // Verde más claro en modo oscuro
-                : (Theme.of(context).brightness == Brightness.light 
-                    ? Colors.grey.shade600 
-                    : Colors.grey.shade500),
-            size: 28,
-          ),
-          tooltip: _estaLeida 
-              ? 'Marcar como no leída' 
-              : 'Marcar como leída',
-          onPressed: _toggleLectura,
-        ),
-      ],*/
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),

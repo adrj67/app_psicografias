@@ -38,7 +38,7 @@ class _NoLeidasScreenState extends State<NoLeidasScreen> {
     try {
       // Obtener IDs de psicografías leídas
       final leidas = await _dbHelper.getIdsLeidas();
-      //print('📊 IDs leídos: ${leidas.length}');
+      debugPrint('📊 IDs leídos: ${leidas.length}');
       
       // Obtener todas las psicografías
       final todas = await _dbHelper.getPsicografias(

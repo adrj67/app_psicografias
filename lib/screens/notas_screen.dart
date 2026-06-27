@@ -18,7 +18,6 @@ class _NotasScreenState extends State<NotasScreen> {
   bool _isLoading = true;
   String? _errorMessage;
   String _searchQuery = '';
-  int _totalNotas = 0;
 
   // Cache de colecciones por psicografía
   Map<int, List<Coleccion>> _coleccionesCache = {};
@@ -64,7 +63,6 @@ class _NotasScreenState extends State<NotasScreen> {
       setState(() {
         _psicografias = psicos;
         _coleccionesCache = cache;
-        _totalNotas = psicos.length;
         _isLoading = false;
       });
 

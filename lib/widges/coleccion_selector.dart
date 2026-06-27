@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../database/database_helper.dart';
 import '../models/coleccion.dart';
-//import '../utils/constants.dart';
 
 class ColeccionSelector extends StatefulWidget {
   final int psicografiaId;
@@ -37,7 +36,7 @@ class _ColeccionSelectorState extends State<ColeccionSelector> {
   @override
   void didUpdateWidget(ColeccionSelector oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // ✅ Actualizar cuando cambian las colecciones seleccionadas desde el padre
+    // Actualizar cuando cambian las colecciones seleccionadas desde el padre
     if (oldWidget.coleccionesSeleccionadas != widget.coleccionesSeleccionadas) {
       setState(() {
         _seleccionadas = List.from(widget.coleccionesSeleccionadas);
@@ -72,8 +71,6 @@ class _ColeccionSelectorState extends State<ColeccionSelector> {
     
     if (mounted) {
       widget.onChanged(_seleccionadas);
-      // Indicar que hubo cambios en las colecciones
-      // Navigator.pop(context, true);
     }
   }
 
@@ -109,7 +106,6 @@ class _ColeccionSelectorState extends State<ColeccionSelector> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('✓ Colección creada y asignada'), backgroundColor: Colors.green),
         );
-        // Navigator.pop(context, true);  // Indicar que hubo cambios
       }
     } catch (e) {
       if (mounted) {

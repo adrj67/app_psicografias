@@ -42,7 +42,7 @@ class ImagenBlobWidget extends StatelessWidget {
       );
     }
 
-    // Mostrar imagen completa (bytes NO es nulo aquí)
+    // Mostrar imagen completa
     return ClipRRect(
       borderRadius: BorderRadius.circular(12),
       child: Container(

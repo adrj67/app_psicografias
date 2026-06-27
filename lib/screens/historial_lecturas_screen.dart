@@ -18,7 +18,7 @@ class _HistorialLecturasScreenState extends State<HistorialLecturasScreen> {
   List<Map<String, dynamic>> _historial = [];
   bool _isLoading = true;
   String? _errorMessage;
-  bool _ordenAscendente = false; // false = más reciente primero
+  bool _ordenAscendente = false; // más reciente primero
 
   Map<int, List<Coleccion>> _coleccionesCache = {};
 

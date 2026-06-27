@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../database/database_helper.dart';
 import '../models/psicografia.dart';
-import '../models/coleccion.dart';
 import '../utils/constants.dart';
 import '../providers/theme_provider.dart';
 import 'detalle_screen.dart';
@@ -26,14 +25,11 @@ class _ListaScreenState extends State<ListaScreen> {
   int _currentPage = 0;
   String _searchQuery = '';
   String? _errorMessage;
-  
-  List<Coleccion> _colecciones = [];
 
   int _totalLeidas = 0;
   final int _totalTotal = AppConstants.totalPsicografias;
 
   Map<int, bool> _lecturasCache = {};
-  bool _busquedaActiva = false;
   
   final ScrollController _scrollController = ScrollController();
 
@@ -81,13 +77,11 @@ class _ListaScreenState extends State<ListaScreen> {
         lecturas[p.id] = await _dbHelper.isLeida(p.id);
       }
       
-      final cols = await _dbHelper.getColecciones();
       final leidas = await _dbHelper.getTotalLeidas();
       
       setState(() {
         _psicografias = nuevos;
         _lecturasCache = lecturas;
-        _colecciones = cols;
         _totalLeidas = leidas;
         _hasMore = nuevos.length == AppConstants.pageSize;
         _currentPage = 1;
@@ -240,7 +234,7 @@ class _ListaScreenState extends State<ListaScreen> {
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: TextField(
-              controller: _searchController,  // ← AGREGAR ESTA LÍNEA
+              controller: _searchController,
               decoration: InputDecoration(
                 hintText: AppConstants.searchHint,
                 prefixIcon: Icon(Icons.search, color: Theme.of(context).hintColor),
@@ -249,9 +243,8 @@ class _ListaScreenState extends State<ListaScreen> {
                         icon: const Icon(Icons.clear),
                         onPressed: () {
                           setState(() {
-                            _searchController.clear();  // ← Limpiar el campo visualmente
+                            _searchController.clear();  // Limpiar el campo visualmente
                             _searchQuery = '';
-                            _busquedaActiva = false;
                             _currentPage = 0;
                             _hasMore = true;
                             _psicografias = [];
@@ -276,7 +269,6 @@ class _ListaScreenState extends State<ListaScreen> {
                   _hasMore = true;
                   _psicografias = [];
                   _isLoading = true;
-                  _busquedaActiva = value.isNotEmpty;
                 });
                 
                 try {
@@ -449,31 +441,9 @@ class _ListaScreenState extends State<ListaScreen> {
                   });
                 }
                 
-                // ✅ RECARGAR CON EL FILTRO ACTUAL (manteniendo búsqueda)
+                // RECARGAR CON EL FILTRO ACTUAL (manteniendo búsqueda)
                 await _recargarConFiltroActual();
               },
-              /* onTap: () async {
-                final result = await Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => DetalleScreen(psicografiaId: p.id)),
-                );
-                
-                if (result == true) {
-                  final Map<int, bool> nuevasLecturas = {};
-                  for (var psico in _psicografias) {
-                    nuevasLecturas[psico.id] = await _dbHelper.isLeida(psico.id);
-                  }
-                  
-                  final nuevasLeidas = await _dbHelper.getTotalLeidas();
-                  
-                  setState(() {
-                    _lecturasCache = nuevasLecturas;
-                    _totalLeidas = nuevasLeidas;
-                  });
-                }
-                
-                await _cargarDatosIniciales();
-              },*/
             ),
           );
         },
@@ -488,7 +458,7 @@ class _ListaScreenState extends State<ListaScreen> {
     try {
       List<Map<String, dynamic>> data;
       
-      // ✅ Si hay búsqueda activa, aplicar filtro
+      // Si hay búsqueda activa, aplicar filtro
       if (_searchQuery.isNotEmpty) {
         data = await _dbHelper.searchPsicografias(
           _searchQuery,
